@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduQuest | Inclusive Learning Directory</title>
+
+  <!-- Tailwind CSS CDN -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-gray-900 font-sans antialiased">
+  <!-- Navbar -->
+  <nav class="bg-orange-500 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <a href="/" class="text-2xl font-bold tracking-wide focus:outline-none focus:ring-2 focus:ring-white">
+        EduQuest
+      </a>
+      <div class="space-x-6 hidden md:flex">
+        <a href="/" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Home</a>
+        <a href="/schools" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Schools</a>
+        <a href="/about" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">About</a>
+        <a href="/contact" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Contact</a>
+      </div>
+      <button class="md:hidden focus:outline-none" aria-label="Open Menu" id="menu-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+    <div id="mobile-menu" class="hidden bg-eduorange md:hidden flex flex-col space-y-2 px-4 pb-4">
+      <a href="/" class="hover:underline">Home</a>
+      <a href="/schools" class="hover:underline">Schools</a>
+      <a href="/about" class="hover:underline">About</a>
+      <a href="/contact" class="hover:underline">Contact</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+<section class="relative w-full h-screen flex items-center justify-center text-center overflow-hidden">
+  <!-- Background image -->
+  <img src="{{ url_for('static', filename='images/equ_quest.jpg') }}" 
+       alt="Students collaborating at EduQuest"
+       class="absolute inset-0 w-full h-full object-cover brightness-75 blur-sm">
+
+  <!-- Overlay for additional contrast -->
+  <div class="absolute inset-0 bg-black bg-opacity-30"></div>
+
+  <!-- Text content -->
+  <div class="relative z-10 max-w-2xl mx-auto px-4">
+    <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg">
+      Welcome to EduQuest
+    </h1>
+    <p class="text-lg md:text-2xl text-gray-100 mb-6 leading-relaxed drop-shadow">
+      Discover inclusive schools that empower every learner — accessible, diverse, and driven by impact.
+    </p>
+    <a href="#schools" 
+       class="inline-block bg-orange-500 hover:bg-orange-600 focus:ring-4 focus:ring-orange-300 text-white font-semibold py-3 px-8 rounded-full transition-all duration-300 focus:outline-none">
+      Explore Schools
+    </a>
+  </div>
+</section>
+    <!-- Why Choose EduQuest Section -->
+<section class="py-16 bg-gray-50">
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+      Why Choose <span class="text-orange-500">EduQuest</span>?
+    </h2>
+    <p class="text-gray-600 max-w-2xl mx-auto mb-12">
+      We believe in empowering every learner through inclusive education.
+      EduQuest helps families connect with accessible schools that champion
+      diversity, care, and innovation.
+    </p>
+
+    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      <!-- Card 1 -->
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg focus-within:shadow-lg transition">
+        <div class="flex justify-center mb-4">
+          <div class="bg-orange-100 text-orange-600 p-3 rounded-full">
+            🎓
+          </div>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">
+          Inclusive School Directory
+        </h3>
+        <p class="text-gray-600 text-sm">
+          Find schools dedicated to accessibility and equal opportunity for all learners.
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg focus-within:shadow-lg transition">
+        <div class="flex justify-center mb-4">
+          <div class="bg-orange-100 text-orange-600 p-3 rounded-full">
+            🧩
+          </div>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">
+          Accurate Information
+        </h3>
+        <p class="text-gray-600 text-sm">
+          Access up-to-date details on facilities, staff qualifications, and accessibility features.
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg focus-within:shadow-lg transition">
+        <div class="flex justify-center mb-4">
+          <div class="bg-orange-100 text-orange-600 p-3 rounded-full">
+            🌍
+          </div>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">
+          Easy Navigation
+        </h3>
+        <p class="text-gray-600 text-sm">
+          Designed with accessibility in mind — smooth keyboard navigation and screen reader support.
+        </p>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg focus-within:shadow-lg transition">
+        <div class="flex justify-center mb-4">
+          <div class="bg-orange-100 text-orange-600 p-3 rounded-full">
+            💬
+          </div>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">
+          Community Support
+        </h3>
+        <p class="text-gray-600 text-sm">
+          Be part of a growing network that advocates for inclusive, quality education for all children.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mission Section -->
+  <section class="bg-orange-500 py-16">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold text-eduorange mb-6">Our Mission</h2>
+      <p class="text-white font-bold text-lg leading-relaxed max-w-3xl mx-auto">
+        At EduQuest, we believe in equal opportunities for all learners.
+        Our mission is to connect families with inclusive schools that cater to diverse abilities,
+        promoting accessibility, awareness, and acceptance across Kenya’s educational landscape.
+      </p>
+    </div>
+  </section>
+  <!-- Featured Schools -->
+<!-- Featured Schools -->
+<section class="py-16 bg-white" id="schools">
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+      Featured <span class="text-orange-500">Schools</span>
+    </h2>
+    <p class="text-gray-600 max-w-2xl mx-auto mb-12">
+      Explore some of the most inclusive schools empowering learners across Kenya.
+    </p>
+
+    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      <!-- School Card 1 -->
+      <div class="bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=800&q=60" alt="Sunrise Inclusive Academy" class="w-full h-48 object-cover">
+        <div class="p-5 text-left">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Sunrise Inclusive Academy</h3>
+          <p class="text-sm text-gray-600 mb-2">Nairobi</p>
+          <p class="text-sm text-gray-500">Empowering learners with hearing and speech challenges through technology.</p>
+        </div>
+      </div>
+
+      <!-- School Card 2 -->
+      <div class="bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1573497491208-6b1acb260507?auto=format&fit=crop&w=800&q=60" alt="Bright Steps Centre" class="w-full h-48 object-cover">
+        <div class="p-5 text-left">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Bright Steps Centre</h3>
+          <p class="text-sm text-gray-600 mb-2">Kiambu</p>
+          <p class="text-sm text-gray-500">Specializing in inclusive primary education for learners with developmental challenges.</p>
+        </div>
+      </div>
+
+      <!-- School Card 3 -->
+      <div class="bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=800&q=60" alt="Unity Learning Centre" class="w-full h-48 object-cover">
+        <div class="p-5 text-left">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Unity Learning Centre</h3>
+          <p class="text-sm text-gray-600 mb-2">Nairobi</p>
+          <p class="text-sm text-gray-500">Promoting inclusive learning for all with adaptive teaching resources.</p>
+        </div>
+      </div>
+
+      <!-- School Card 4 -->
+      <div class="bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=800&q=60" alt="Gracefield Special School" class="w-full h-48 object-cover">
+        <div class="p-5 text-left">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Gracefield Special School</h3>
+          <p class="text-sm text-gray-600 mb-2">Kiambu</p>
+          <p class="text-sm text-gray-500">Creating an enabling environment for children with mobility and learning disabilities.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10">
+      <a href="#schools" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-8 rounded-full focus:ring-4 focus:ring-orange-300 transition">
+        View All Schools
+      </a>
+    </div>
+  </div>
+</section>
+ <!-- Footer -->
+<footer class="bg-gray-900 text-gray-300 py-10">
+  <div class="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-3">
+    
+    <!-- About -->
+    <div>
+      <h3 class="text-xl font-semibold text-white mb-3">EduQuest</h3>
+      <p class="text-sm">
+        Empowering every learner through access to inclusive education.
+        We believe in diversity, accessibility, and equal opportunities for all.
+      </p>
+    </div>
+
+    <!-- Quick Links -->
+    <div>
+      <h3 class="text-xl font-semibold text-white mb-3">Quick Links</h3>
+      <ul class="space-y-2 text-sm">
+        <li><a href="#schools" class="hover:text-orange-400 focus:text-orange-400 transition">Schools</a></li>
+        <li><a href="#" class="hover:text-orange-400 focus:text-orange-400 transition">About Us</a></li>
+        <li><a href="#" class="hover:text-orange-400 focus:text-orange-400 transition">Contact</a></li>
+        <li><a href="#" class="hover:text-orange-400 focus:text-orange-400 transition">Accessibility Options</a></li>
+      </ul>
+    </div>
+
+    <!-- Contact -->
+    <div>
+      <h3 class="text-xl font-semibold text-white mb-3">Contact</h3>
+      <p class="text-sm mb-2">📍 Nairobi, Kenya</p>
+      <p class="text-sm mb-2">📧 info@eduquest.org</p>
+      <p class="text-sm mb-2">📞 +254 700 000 000</p>
+      <div class="mt-4 flex space-x-4 text-lg">
+        <a href="#" aria-label="Facebook" class="hover:text-orange-400 focus:text-orange-400">🌐</a>
+        <a href="#" aria-label="Twitter" class="hover:text-orange-400 focus:text-orange-400">🐦</a>
+        <a href="#" aria-label="Instagram" class="hover:text-orange-400 focus:text-orange-400">📸</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center text-sm mt-10 border-t border-gray-700 pt-6">
+    © <span id="year"></span> EduQuest. All Rights Reserved.
+  </div>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</footer> 
+
+  <!-- Script for mobile menu & dynamic year -->
+  <script>
+    document.getElementById('menu-btn').addEventListener('click', () => {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

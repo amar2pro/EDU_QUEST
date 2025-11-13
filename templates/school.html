@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schools | EduQuest</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+  <!-- 🌍 Navbar -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="/" class="text-2xl font-bold text-orange-600">EduQuest</a>
+      <div class="space-x-6">
+        <a href="/" class="hover:text-orange-600 focus:text-orange-600 focus:outline-none">Home</a>
+        <a href="/schools" class="text-orange-600 font-semibold">Schools</a>
+        <a href="#" class="hover:text-orange-600 focus:text-orange-600 focus:outline-none">About</a>
+        <a href="#" class="hover:text-orange-600 focus:text-orange-600 focus:outline-none">Contact</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 🎯 Filter Section -->
+  <section class="max-w-7xl mx-auto mt-10 px-6">
+    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Explore Inclusive Schools</h2>
+    <form id="filterForm" class="bg-white p-6 rounded-2xl shadow-md flex flex-wrap gap-4 justify-center" onsubmit="event.preventDefault(); fetchSchools();">
+      
+      <!-- Search Bar -->
+      <label for="searchInput" class="sr-only">Search by school name</label>
+      <input 
+        id="searchInput"
+        type="text"
+        placeholder="Search by school name..."
+        aria-label="Search by school name"
+        class="w-full sm:w-72 border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:outline-none"
+      />
+
+      <!-- County Dropdown -->
+      <label for="regionSelect" class="sr-only">Select county</label>
+      <select id="regionSelect" aria-label="Select county" class="w-full sm:w-48 border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+        <option value="">All Counties</option>
+        <option value="Nairobi">Nairobi</option>
+        <option value="Kiambu">Kiambu</option>
+        <option value="Mombasa">Mombasa</option>
+        <option value="Nakuru">Nakuru</option>
+      </select>
+
+      <!-- Disability Type -->
+      <label for="disabilitySelect" class="sr-only">Select disability type</label>
+      <select id="disabilitySelect" aria-label="Select disability type" class="w-full sm:w-48 border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+        <option value="">All Disability Types</option>
+        <option>Hearing Impairment</option>
+        <option>Visual Impairment</option>
+        <option>Physical Disability</option>
+        <option>Autism</option>
+      </select>
+
+      <!-- Level -->
+      <label for="levelSelect" class="sr-only">Select level</label>
+      <select id="levelSelect" aria-label="Select level" class="w-full sm:w-48 border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+        <option value="">All Levels</option>
+        <option>Primary</option>
+        <option>Secondary</option>
+        <option>Vocational</option>
+      </select>
+
+      <!-- Search Button -->
+      <button
+        id="searchButton"
+        type="submit"
+        class="bg-orange-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-orange-700 focus:ring-2 focus:ring-orange-500 focus:outline-none"
+      >
+        Search
+      </button>
+    </form>
+  </section>
+
+  <!-- 🏫 Results Section -->
+  <section class="max-w-7xl mx-auto px-6 mt-10 mb-16">
+    <h3 class="text-2xl font-semibold mb-4 text-gray-700">Results</h3>
+    <div id="school-results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Placeholder message before search -->
+      <div class="col-span-full text-center text-gray-500 italic">
+        Use the filters above to explore inclusive schools.
+      </div>
+    </div>
+  </section>
+
+  <!-- 🌙 Footer -->
+  <footer class="bg-gray-900 text-gray-300 py-10">
+    <div class="max-w-6xl mx-auto px-6 grid gap-8 md:grid-cols-3">
+      
+      <!-- About -->
+      <div>
+        <h3 class="text-xl font-semibold text-white mb-3">EduQuest</h3>
+        <p class="text-sm">
+          Empowering every learner through access to inclusive education.
+          We believe in diversity, accessibility, and equal opportunities for all.
+        </p>
+      </div>
+
+      <!-- Quick Links -->
+      <div>
+        <h3 class="text-xl font-semibold text-white mb-3">Quick Links</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/schools" class="hover:text-orange-400 focus:text-orange-400 transition">Schools</a></li>
+          <li><a href="#" class="hover:text-orange-400 focus:text-orange-400 transition">About Us</a></li>
+          <li><a href="#" class="hover:text-orange-400 focus:text-orange-400 transition">Contact</a></li>
+          <li><a href="#" class="hover:text-orange-400 focus:text-orange-400 transition">Accessibility Options</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div>
+        <h3 class="text-xl font-semibold text-white mb-3">Contact</h3>
+        <p class="text-sm mb-2">📍 Nairobi, Kenya</p>
+        <p class="text-sm mb-2">📧 info@eduquest.org</p>
+        <p class="text-sm mb-2">📞 +254 700 000 000</p>
+        <div class="mt-4 flex space-x-4 text-lg">
+          <a href="#" aria-label="Facebook" class="hover:text-orange-400 focus:text-orange-400">🌐</a>
+          <a href="#" aria-label="Twitter" class="hover:text-orange-400 focus:text-orange-400">🐦</a>
+          <a href="#" aria-label="Instagram" class="hover:text-orange-400 focus:text-orange-400">📸</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center text-sm mt-10 border-t border-gray-700 pt-6">
+      © <span id="year"></span> EduQuest. All Rights Reserved.
+    </div>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </footer> 
+
+  <!-- 🧠 JavaScript for Fetching Schools -->
+  <script>
+async function fetchSchools() {
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  const region = document.getElementById('regionSelect').value;
+  const level = document.getElementById('levelSelect').value;
+  const disability = document.getElementById('disabilitySelect').value;
+
+  const resultsContainer = document.getElementById('school-results');
+  resultsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 italic">Loading schools...</p>';
+
+  try {
+    // Fetch from your API route
+    const response = await fetch('/api/schools');
+    const data = await response.json();
+
+    // Filter schools in JS
+    const filtered = data.filter(school => {
+      const matchesName = school.name.toLowerCase().includes(query);
+      const matchesRegion = region ? school.region === region : true;
+      const matchesLevel = level ? school.level === level : true;
+      const matchesDisability = disability ? (school.description.toLowerCase().includes(disability.toLowerCase()) || school.accessibility?.toLowerCase().includes(disability.toLowerCase())) : true;
+      return matchesName && matchesRegion && matchesLevel && matchesDisability;
+    });
+
+    // Render results
+    resultsContainer.innerHTML = '';
+    if (filtered.length === 0) {
+      resultsContainer.innerHTML = '<p class="col-span-full text-gray-600 text-center">No schools found.</p>';
+      return;
+    }
+
+    filtered.forEach(school => {
+  const card = document.createElement('div');
+  card.className = `
+    bg-white rounded-2xl shadow-md overflow-hidden 
+    transition transform hover:-translate-y-1 hover:shadow-lg 
+    focus-within:ring-2 focus-within:ring-orange-500
+  `;
+
+  const image = school.image_url 
+    ? `<img src="${school.image_url}" alt="${school.name}" class="w-full h-48 object-cover" />`
+    : `<div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400 italic">No image</div>`;
+
+  card.innerHTML = `
+    ${image}
+    <div class="p-4">
+      <h3 class="text-lg font-semibold text-orange-600 mb-1 truncate">${school.name}</h3>
+      <p class="text-gray-600 text-sm mb-1">📍 ${school.region || 'Unknown region'}</p>
+      <p class="text-gray-600 text-sm mb-2">🎓 ${school.level || 'Unspecified level'}</p>
+      <p class="text-gray-700 text-sm mb-4 line-clamp-3">${school.description || 'No description available.'}</p>
+      <a 
+        href="/school/${school.id}" 
+        class="inline-block bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-700 transition"
+      >
+        View Details →
+      </a>
+    </div>
+  `;
+
+  resultsContainer.appendChild(card);
+});
+  } catch (error) {
+    resultsContainer.innerHTML = '<p class="col-span-full text-red-600 text-center">Error loading schools. Please try again later.</p>';
+    console.error(error);
+  }
+}
+
+// Initial load
+fetchSchools();
+</script>
+</body>
+</html>

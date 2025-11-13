@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ school.name }} - Details | EduQuest</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="max-w-5xl mx-auto p-6">
+        <a href="/schools" class="text-orange-600 hover:underline mb-4 inline-block">&larr; Back to all schools</a>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h1 class="text-3xl font-bold mb-3">{{ school.name }}</h1>
+            <p class="text-gray-700 mb-6">{{ school.description }}</p>
+
+            {% if school.image_url %}
+            <img src="{{ school.image_url }}" alt="{{ school.name }}" class="w-full rounded-lg mb-6 shadow-md">
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                <div>
+                    <h2 class="text-xl font-semibold mb-3">School Information</h2>
+                    <p><strong>Region:</strong> {{ school.region or 'N/A' }}</p>
+                    <p><strong>Level:</strong> {{ school.level or 'N/A' }}</p>
+                    <p><strong>Accessibility:</strong> {{ school.accessibility or 'N/A' }}</p>
+                    <p><strong>Fee Structure:</strong> {{ school.fee_structure or 'N/A' }}</p>
+                    <p><strong>Contact:</strong> {{ school.contact or 'N/A' }}</p>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-semibold mb-3">Principal Information</h2>
+                    {% if principal %}
+                        <img src="{{ principal.image_url or '/static/default-principal.png' }}" class="w-32 h-32 rounded-full object-cover mb-3">
+                        <p><strong>{{ principal.name }}</strong></p>
+                        <p>Email: {{ principal.email }}</p>
+                        <p>Contact: {{ principal.contact }}</p>
+                    {% else %}
+                        <p>No principal information available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Feedback Section -->
+            <div class="mt-8">
+                <h2 class="text-2xl font-semibold mb-4">Feedback & Reviews</h2>
+
+                <!-- List existing feedback -->
+                {% if feedbacks %}
+                    {% for f in feedbacks %}
+                        <div class="bg-gray-50 p-4 rounded-lg mb-3">
+                            <p><strong>{{ f.name }}</strong> said:</p>
+                            <p class="text-gray-700">{{ f.message }}</p>
+                            {% if f.reply %}
+                                <p class="mt-2 text-green-700 text-sm"><strong>Principal Reply:</strong> {{ f.reply }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-gray-500">No feedback yet. Be the first to leave one!</p>
+                {% endif %}
+
+                <!-- Feedback Form -->
+                <form id="feedbackForm" class="mt-6 space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <input type="hidden" name="school_id" value="{{ school.id }}">
+                    <input type="text" name="name" placeholder="Your Name" required class="w-full border p-2 rounded">
+                    <textarea name="message" placeholder="Your feedback..." required class="w-full border p-2 rounded"></textarea>
+                    <button type="submit" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            alert('Feedback submitted successfully!');
+            window.location.reload();
+        } else {
+            alert('Error submitting feedback.');
+        }
+    });
+    </script>
+
+</body>
+</html>
