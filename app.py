@@ -1,11 +1,14 @@
 import os
 from datetime import datetime
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session
-from models import db, School 
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+from models import db, School
 
+# ---------------------
+# App Configuration
+# ---------------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -22,19 +25,20 @@ CORS(app)
 class Feedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     school_id = db.Column(db.Integer, db.ForeignKey('school.id'), nullable=False)
-    name = db.Column(db.String(120), nullable=False)  # Make this required
-    email = db.Column(db.String(120), nullable=True)  # Optional but useful for follow-up
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=True)
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationship (optional but handy for easy school access)
-     #school = db.relationship('School', backref=db.backref('feedbacks', lazy=True))
+    # Relationship to School
+    school = db.relationship('School', backref=db.backref('feedbacks', lazy=True))
 
     def to_dict(self):
         return {
             "id": self.id,
             "school_id": self.school_id,
             "name": self.name,
+            "email": self.email,
             "message": self.message,
             "created_at": self.created_at.isoformat()
         }
@@ -50,11 +54,14 @@ class Admin(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+
 # ---------------------
-# Database init / seed
+# Database Initialization
 # ---------------------
 def init_db(seed=True):
-    db.create_all()
+    with app.app_context():
+        db.create_all()
+
 
     # create default admin
     if not Admin.query.filter_by(username='admin').first():
@@ -314,9 +321,8 @@ def add_school_page():
 # Route for the admin dashboard
 @app.route('/admin-dashboard')
 def admin_dashboard():
-    schools = School.query.all()
-    return render_template('admin-dashboard.html', schools=schools)
-
+    schools = School.query.all()  
+    return render_template('admin-dashboard.html', schools=schools) 
 
 # ---------------------
 # Admin auth
