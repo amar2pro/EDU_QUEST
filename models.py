@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -11,7 +12,7 @@ class School(db.Model):
     description = db.Column(db.Text, nullable=True)
     accessibility = db.Column(db.Text, nullable=True)
     fee_structure = db.Column(db.String(200), nullable=True)
-    image_url = db.Column(db.String(300), nullable=True)
+    image_url = db.Column(db.String(500), nullable=True)
     
     def to_dict(self):
         return {
@@ -25,3 +26,4 @@ class School(db.Model):
             "fee_structure": self.fee_structure,
             "image_url": self.image_url
         }
+    

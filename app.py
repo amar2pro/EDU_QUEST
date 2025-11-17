@@ -1,9 +1,12 @@
 import os
+import sqlite3
+import time
 from datetime import datetime
-from flask import Flask, jsonify, request, render_template, redirect, url_for, session
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from models import db, School
 
 # ---------------------
@@ -15,6 +18,12 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config['SECRET_KEY'] = 'change_this_secret_for_production'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'eduquest.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'static/images/schools'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+
+# Make sure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
 CORS(app)
@@ -417,26 +426,154 @@ def delete_school(id):
     db.session.commit()
     return jsonify({"message": "Deleted"}), 200
 
-# Feedback
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+@app.route('/upload-school-image', methods=['POST'])
+def upload_school_image():
+    if 'school_image' not in request.files:
+        return jsonify({'error': 'No file selected'}), 400
+    
+    file = request.files['school_image']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if file and allowed_file(file.filename):
+        # Generate unique filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{int(time.time())}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        
+        # Save file
+        file.save(file_path)
+        
+        # Return the relative URL for the image
+        image_url = f"/static/images/schools/{unique_filename}"
+        return jsonify({'image_url': image_url})
+    
+    return jsonify({'error': 'Invalid file type'}), 400
+
+
+ # DELETE IMAGE FUNCTIONALITY
+@app.route('/delete-school-image/<int:school_id>', methods=['DELETE'])
+def delete_school_image(school_id):
+    try:
+        school = School.query.get_or_404(school_id)
+        
+        if school.image_url:
+            # Delete the physical file
+            image_path = school.image_url.replace('/static/', 'static/')
+            if os.path.exists(image_path):
+                os.remove(image_path)
+            
+            # Update the database
+            school.image_url = None
+            db.session.commit()
+            
+        return jsonify({'success': True})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+# FEEDBACK
+@app.route('/admin/feedback')
+def admin_feedback_page():
+    return render_template('admin-feedback.html')
+
+@app.route('/api/all-schools')
+def all_schools():
+    try:
+        schools = School.query.all()  # Or however you query schools
+        
+        schools_data = []
+        for school in schools:
+            schools_data.append({
+                "id": school.id,
+                "name": school.name,
+                "region": school.region,
+                "level": school.level,
+                "contact": getattr(school, 'contact', '')  # Handle optional fields
+            })
+        
+        return jsonify(schools_data)
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Helper function to convert feedback row to dict
+def feedback_to_dict(row):
+    return {
+        'id': row[0],
+        'school_id': row[1],
+        'name': row[2],
+        'email': row[3],
+        'message': row[4],
+        'created_at': row[5],
+        'admin_reply': row[6],
+        'reply_date': row[7],
+        'school_name': 'School ' + str(row[1])  # Simple school name
+    }
+
 @app.route('/api/feedback', methods=['POST'])
 def post_feedback():
     data = request.json or {}
-    f = Feedback(
-        school_id=data.get('school_id'),
-        name=data.get('name'),
-        message=data.get('message', '')
+    conn = sqlite3.connect('eduquest.db')
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "INSERT INTO feedback (school_id, name, email, message, created_at) VALUES (?, ?, ?, ?, ?)",
+        (data.get('school_id'), data.get('name'), data.get('email'), data.get('message'), datetime.now())
     )
-    db.session.add(f)
-    db.session.commit()
-    return jsonify(f.to_dict()), 201
+    conn.commit()
+    feedback_id = cursor.lastrowid
+    conn.close()
+    
+    return jsonify({'id': feedback_id, 'message': 'Feedback submitted'}), 201
 
 @app.route('/api/feedback', methods=['GET'])
 def get_feedbacks():
-    if not session.get('admin_logged_in'):
-        return jsonify({"error": "Unauthorized"}), 401
-    fs = Feedback.query.order_by(Feedback.created_at.desc()).all()
-    return jsonify([f.to_dict() for f in fs]), 200
+    conn = sqlite3.connect('eduquest.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM feedback ORDER BY created_at DESC")
+    feedbacks = [feedback_to_dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(feedbacks), 200
 
+@app.route('/api/feedback/<int:feedback_id>/reply', methods=['POST'])
+def reply_to_feedback(feedback_id):
+    data = request.json
+    reply_message = data.get('reply')
+    
+    conn = sqlite3.connect('eduquest.db')
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "UPDATE feedback SET admin_reply = ?, reply_date = ? WHERE id = ?",
+        (reply_message, datetime.now(), feedback_id)
+    )
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Reply added successfully"})
+
+@app.route('/api/feedback/<int:feedback_id>', methods=['DELETE'])
+def delete_feedback(feedback_id):
+    conn = sqlite3.connect('eduquest.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM feedback WHERE id = ?", (feedback_id,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Feedback deleted successfully"})
+
+@app.route('/api/schools/<int:school_id>/feedback')
+def get_school_feedback(school_id):
+    conn = sqlite3.connect('eduquest.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM feedback WHERE school_id = ? ORDER BY created_at DESC", (school_id,))
+    feedbacks = [feedback_to_dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(feedbacks)
 
 # SCHOOL DETAILS ROUTE 
 
@@ -445,12 +582,12 @@ def school_details(id):
     school = School.query.get_or_404(id)
     feedbacks = Feedback.query.filter_by(school_id=id).order_by(Feedback.created_at.desc()).all()
 
-    # Optional: If you’ll add principals later
+    # Optional: If you'll add principals later
     principal = None
     try:
         principal = Principal.query.filter_by(school_id=id).first()
     except Exception:
-        pass  # In case Principal model doesn’t exist yet
+        pass  # In case Principal model doesn't exist yet
 
     return render_template('school_details.html', school=school, feedbacks=feedbacks, principal=principal)
 
