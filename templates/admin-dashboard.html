@@ -582,6 +582,26 @@
     </div>
 
 <script>
+    // Add this function to fix the previewImage error
+window.previewImage = function(input, previewId) {
+    const preview = document.getElementById(previewId);
+    const file = input.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewId === 'imagePreview') {
+                document.getElementById('previewImage').src = e.target.result;
+            } else if (previewId === 'editImagePreview') {
+                document.getElementById('currentSchoolImage').src = e.target.result;
+            }
+            preview.classList.remove('hidden');
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.classList.add('hidden');
+    }
+}
     // Wait for the page to fully load before running JavaScript
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🚀 Page loaded, initializing admin dashboard...');

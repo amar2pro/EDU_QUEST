@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from models import db, School
+from models import db, School,Principal,MeetingBooking
 
 # ---------------------
 # App Configuration
@@ -333,6 +333,44 @@ def admin_dashboard():
     schools = School.query.all()  
     return render_template('admin-dashboard.html', schools=schools) 
 
+#ROUTE FOR PRINCIPAL DASHBOARD
+@app.route('/principal-dashboard')
+def principal_dashboard():
+    # Check if principal is logged in
+    if not session.get('principal_logged_in'):
+        print("❌ Principal not logged in - redirecting to home")
+        return redirect('/')
+    
+    # Get principal and school data
+    principal = Principal.query.get(session['principal_id'])
+    school = School.query.get(session['principal_school_id'])
+    
+    print(f"🔍 Debug - Principal ID: {session.get('principal_id')}")
+    print(f"🔍 Debug - School ID: {session.get('principal_school_id')}")
+    print(f"🔍 Debug - Principal found: {principal is not None}")
+    print(f"🔍 Debug - School found: {school is not None}")
+    
+    if not principal or not school:
+        session.clear()
+        return redirect('/')
+    
+    # Get meetings for this principal
+    meetings = MeetingBooking.query.filter_by(principal_id=principal.id).order_by(MeetingBooking.created_at.desc()).all()
+    
+    print(f"🔍 Debug - Meetings found: {len(meetings)}")
+    for meeting in meetings:
+        print(f"🔍 Meeting: {meeting.id}, Principal ID: {meeting.principal_id}, Status: {meeting.status}")
+    
+    return render_template('principal-dashboard.html', 
+                         principal=principal, 
+                         school=school,
+                         meetings=meetings)
+# ROUTE FOR PRINCIPAL LOGOUT
+@app.route('/api/principals/logout', methods=['POST'])
+def principal_logout():
+    session.clear()
+    return jsonify({"message": "Logged out successfully"}), 200
+
 # ---------------------
 # Admin auth
 @app.route('/api/admin/login', methods=['POST'])
@@ -430,6 +468,129 @@ def delete_school(id):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+#ROUTE FOR CONFIRMING  PRINCIPAL MODEL EXISTS
+@app.route('/update-db', methods=['GET'])
+def update_db():
+    """Route to update database with new models"""
+    try:
+        with app.app_context():
+            db.create_all()  # This will create any new tables
+        return jsonify({"message": "Database updated successfully with Principal model"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+#ROUTE FOR CONFIRMING MEETING BOOKING MODEL EXISTS   
+@app.route('/update-db-meetings')
+def update_db_meetings():
+    """Route to update database with MeetingBooking model"""
+    try:
+        with app.app_context():
+            db.create_all()
+        return jsonify({"message": "Database updated successfully with MeetingBooking model"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/debug-meetings')
+def debug_meetings():
+    """Debug route to check all meetings in database"""
+    try:
+        meetings = MeetingBooking.query.all()
+        meetings_data = []
+        for meeting in meetings:
+            meetings_data.append({
+                "id": meeting.id,
+                "school_id": meeting.school_id,
+                "principal_id": meeting.principal_id,
+                "user_name": meeting.user_name,
+                "status": meeting.status,
+                "preferred_date": meeting.preferred_date.isoformat() if meeting.preferred_date else None
+            })
+        return jsonify({"meetings": meetings_data, "total": len(meetings)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+#ROUTE FOR BOOKING A MEETING
+@app.route('/api/meetings/book', methods=['POST'])
+def book_meeting():
+    try:
+        data = request.json or {}
+        print(f"📅 Meeting booking attempt: {data}")
+        
+        # Validation
+        required_fields = ['school_id', 'principal_id', 'user_name', 'user_email', 'purpose', 'preferred_date']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Verify principal exists
+        principal = Principal.query.get(data['principal_id'])
+        if not principal:
+            return jsonify({"error": "Principal not found"}), 404
+        
+        # Create meeting booking
+        meeting = MeetingBooking(
+            school_id=data['school_id'],
+            principal_id=data['principal_id'],
+            user_name=data['user_name'],
+            user_email=data['user_email'],
+            user_phone=data.get('user_phone'),
+            purpose=data['purpose'],
+            preferred_date=datetime.fromisoformat(data['preferred_date'].replace('Z', '+00:00')),
+            special_requirements=data.get('special_requirements')
+        )
+        
+        db.session.add(meeting)
+        db.session.commit()
+        
+        print(f"✅ Meeting booked: {meeting.id} - {meeting.user_name} with principal {meeting.principal_id}")
+        
+        return jsonify({
+            "message": "Meeting request submitted successfully",
+            "meeting_id": meeting.id
+        }), 201
+        
+    except Exception as e:
+        print(f"❌ Meeting booking error: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+    
+#UPDATE MEETING BOOKING ROUTE ON PRINCIPAL DASHBOARD
+@app.route('/api/meetings/<int:meeting_id>/status', methods=['PUT'])
+def update_meeting_status(meeting_id):
+    try:
+        # Check if principal is logged in
+        if not session.get('principal_logged_in'):
+            return jsonify({"error": "Unauthorized"}), 401
+        
+        data = request.json or {}
+        new_status = data.get('status')
+        
+        if not new_status:
+            return jsonify({"error": "Status is required"}), 400
+        
+        # Get meeting and verify it belongs to this principal
+        meeting = MeetingBooking.query.get(meeting_id)
+        if not meeting:
+            return jsonify({"error": "Meeting not found"}), 404
+        
+        if meeting.principal_id != session['principal_id']:
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        # Update status
+        meeting.status = new_status
+        db.session.commit()
+        
+        print(f"Meeting {meeting_id} status updated to: {new_status}")  # Simulate notification
+        
+        return jsonify({
+            "message": f"Meeting {new_status} successfully",
+            "meeting": meeting.to_dict()
+        }), 200
+        
+    except Exception as e:
+        print(f"Meeting status update error: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+#IMAGES MANAGEMENT
 @app.route('/upload-school-image', methods=['POST'])
 def upload_school_image():
     if 'school_image' not in request.files:
@@ -475,6 +636,128 @@ def delete_school_image(school_id):
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+    #ROUTE FOR PRINCIPALS
+@app.route('/api/principals/register', methods=['POST'])
+def register_principal():
+    try:
+        data = request.json or {}
+        print(f"Registration attempt with data: {data}")
+        
+        
+        # Create principal
+        principal = Principal(
+            school_id=data['school_id'],
+            name=data['name'],
+            email=data['email'],
+            phone=data['phone'],
+            verification_token=os.urandom(24).hex(),
+            password_hash=generate_password_hash(data['password']),
+            is_active=True  # AUTO-ACTIVATE FOR NOW
+        )
+        
+        db.session.add(principal)
+        db.session.commit()
+        
+        print(f"Principal registered successfully: {principal.email}")
+        
+        # AUTO-LOGIN: Create session immediately
+        session['principal_logged_in'] = True
+        session['principal_id'] = principal.id
+        session['principal_school_id'] = principal.school_id
+        session['principal_name'] = principal.name
+        
+        return jsonify({
+            "message": "Registration successful!",
+            "principal_id": principal.id
+        }), 201
+        
+    except Exception as e:
+        print(f"Registration error: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+    
+    #PRINCIPAL LOGIN ROUTE 
+@app.route('/api/principals/login', methods=['POST'])
+def principal_login():
+    try:
+        data = request.json or {}
+        
+        # Validation
+        if not data.get('email') or not data.get('password'):
+            return jsonify({"error": "Email and password required"}), 400
+        
+        # Find principal by email
+        principal = Principal.query.filter_by(email=data['email']).first()
+        if not principal:
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        # Check password
+        if not check_password_hash(principal.password_hash, data['password']):
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        # Check if account is active
+        if not principal.is_active:
+            return jsonify({"error": "Account pending admin approval. Please wait for activation."}), 403
+        
+        # Login successful - create session
+        session['principal_logged_in'] = True
+        session['principal_id'] = principal.id
+        session['principal_school_id'] = principal.school_id
+        session['principal_name'] = principal.name
+        
+        return jsonify({
+            "message": "Login successful",
+            "principal": principal.to_dict()
+        }), 200
+        
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+    
+    #PRINCIPAL PROFILE UPDATE ROUTE
+@app.route('/api/principals/profile', methods=['POST'])
+def update_principal_profile():
+    try:
+        # Check if principal is logged in
+        if not session.get('principal_logged_in'):
+            return jsonify({"error": "Unauthorized"}), 401
+        
+        principal = Principal.query.get(session['principal_id'])
+        if not principal:
+            return jsonify({"error": "Principal not found"}), 404
+        
+        # Handle file upload
+        if 'profile_photo' in request.files:
+            file = request.files['profile_photo']
+            if file and file.filename != '' and allowed_file(file.filename):
+                # Generate unique filename
+                filename = secure_filename(file.filename)
+                unique_filename = f"principal_{principal.id}_{int(time.time())}_{filename}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                
+                # Save file
+                file.save(file_path)
+                principal.image_url = f"/static/images/schools/{unique_filename}"
+        
+        # Update other fields
+        principal.name = request.form.get('name', principal.name)
+        principal.email = request.form.get('email', principal.email)
+        principal.phone = request.form.get('phone', principal.phone)
+        principal.bio = request.form.get('bio', principal.bio)
+        principal.qualifications = request.form.get('qualifications', principal.qualifications)
+        principal.office_hours = request.form.get('office_hours', principal.office_hours)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Profile updated successfully",
+            "principal": principal.to_dict()
+        }), 200
+        
+    except Exception as e:
+        print(f"Profile update error: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
 # FEEDBACK
 @app.route('/admin/feedback')
 def admin_feedback_page():
@@ -576,21 +859,24 @@ def get_school_feedback(school_id):
     return jsonify(feedbacks)
 
 # SCHOOL DETAILS ROUTE 
+from datetime import datetime  # Make sure this import is at the top
 
 @app.route('/school/<int:id>')
 def school_details(id):
     school = School.query.get_or_404(id)
     feedbacks = Feedback.query.filter_by(school_id=id).order_by(Feedback.created_at.desc()).all()
-
-    # Optional: If you'll add principals later
-    principal = None
+    
+    # Get principal data directly
     try:
         principal = Principal.query.filter_by(school_id=id).first()
     except Exception:
-        pass  # In case Principal model doesn't exist yet
+        principal = None
 
-    return render_template('school_details.html', school=school, feedbacks=feedbacks, principal=principal)
-
+    return render_template('school_details.html', 
+                         school=school, 
+                         feedbacks=feedbacks, 
+                         principal=principal,
+                         now=datetime.now())  
 
  # ADD-SCHOOL ROUTE TO HANDLE FORM SUBMISSION
 @app.route('/add-school', methods=['POST'])
