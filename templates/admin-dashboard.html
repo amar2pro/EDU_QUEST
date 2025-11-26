@@ -363,7 +363,7 @@
                 </div>
             </div>
             
-            <form id="addSchoolForm" action="/add-school" method="POST" class="p-6 space-y-4">
+           <form id="addSchoolForm" action="/add-school" method="POST" enctype="multipart/form-data" class="p-6 space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">School Name *</label>
@@ -658,50 +658,49 @@ window.previewImage = function(input, previewId) {
         }
 
         window.openEditSchoolModal = async function(id) {
-            try {
-                // For demo purposes, we'll create mock data
-                // In a real application, you would fetch this from your API
-                const mockSchool = {
-                    id: id,
-                    name: "Sample School " + id,
-                    region: "Nairobi",
-                    level: "Primary",
-                    contact: "contact@school.com",
-                    description: "A sample school description",
-                    accessibility: "Wheelchair accessible",
-                    fee_structure: "KES 50,000 per term",
-                    image_url: "https://via.placeholder.com/300x200?text=School+Image"
-                };
-                
-                // Populate form fields with mock data
-                document.getElementById('editSchoolId').value = mockSchool.id;
-                document.getElementById('editSchoolName').value = mockSchool.name || '';
-                document.getElementById('editSchoolRegion').value = mockSchool.region || '';
-                document.getElementById('editSchoolLevel').value = mockSchool.level || '';
-                document.getElementById('editSchoolContact').value = mockSchool.contact || '';
-                document.getElementById('editSchoolDescription').value = mockSchool.description || '';
-                document.getElementById('editSchoolAccessibility').value = mockSchool.accessibility || '';
-                document.getElementById('editSchoolFeeStructure').value = mockSchool.fee_structure || '';
-                
-                // Handle image preview
-                const imagePreview = document.getElementById('editImagePreview');
-                const currentImage = document.getElementById('currentSchoolImage');
-                if (mockSchool.image_url) {
-                    currentImage.src = mockSchool.image_url;
-                    imagePreview.classList.remove('hidden');
-                } else {
-                    imagePreview.classList.add('hidden');
-                }
-                
-                // Show modal
-                document.getElementById('editSchoolModal').classList.remove('hidden');
-                
-                console.log('Edit modal opened for school ID:', id);
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error loading school data: ' + error.message);
-            }
+    try {
+        console.log('🔄 Fetching school data for ID:', id);
+        
+        // Fetch real school data from API
+        const response = await fetch(`/api/schools/${id}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch school data');
         }
+        
+        const school = await response.json();
+        console.log('📝 Loaded school data:', school);
+        
+        // Populate form fields with real data
+        document.getElementById('editSchoolId').value = school.id;
+        document.getElementById('editSchoolName').value = school.name || '';
+        document.getElementById('editSchoolRegion').value = school.region || '';
+        document.getElementById('editSchoolLevel').value = school.level || '';
+        document.getElementById('editSchoolContact').value = school.contact || '';
+        document.getElementById('editSchoolDescription').value = school.description || '';
+        document.getElementById('editSchoolAccessibility').value = school.accessibility || '';
+        document.getElementById('editSchoolFeeStructure').value = school.fee_structure || '';
+        
+        // Handle image preview
+        const imagePreview = document.getElementById('editImagePreview');
+        const currentImage = document.getElementById('currentSchoolImage');
+        if (school.image_url) {
+            currentImage.src = school.image_url;
+            imagePreview.classList.remove('hidden');
+        } else {
+            imagePreview.classList.add('hidden');
+        }
+        
+        // Show modal
+        document.getElementById('editSchoolModal').classList.remove('hidden');
+        
+        console.log('✅ Edit modal opened with real data');
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading school data: ' + error.message);
+    }
+}
+       
 
         window.closeEditSchoolModal = function() {
             const modal = document.getElementById('editSchoolModal');
@@ -764,7 +763,7 @@ window.previewImage = function(input, previewId) {
             document.getElementById('editImagePreview').classList.add('hidden');
         }
 
-        // Add School Form Submission
+        // Add School Form Submission - FIXED VERSION
         document.getElementById('addSchoolForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -775,13 +774,23 @@ window.previewImage = function(input, previewId) {
                 submitButton.disabled = true;
                 submitButton.textContent = 'Adding School...';
                 
-                // For demo purposes, just show success message
-                setTimeout(() => {
-                    alert('School added successfully! (Demo)');
+                console.log('📝 Submitting school form to backend...');
+                
+                // Submit the form normally to the backend
+                const response = await fetch('/add-school', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    console.log('✅ School added successfully!');
+                    alert('School added successfully!');
                     closeAddSchoolModal();
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Add School';
-                }, 1000);
+                    // Reload the page to show the new school
+                    window.location.reload();
+                } else {
+                    throw new Error('Server returned ' + response.status);
+                }
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -791,24 +800,35 @@ window.previewImage = function(input, previewId) {
             }
         });
 
-        // Edit School Form Submission
+        // Edit School Form Submission - FIXED VERSION  
         document.getElementById('editSchoolForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const formData = new FormData(this);
+            const schoolId = document.getElementById('editSchoolId').value;
             const submitButton = this.querySelector('button[type="submit"]');
             
             try {
                 submitButton.disabled = true;
                 submitButton.textContent = 'Updating School...';
                 
-                // For demo purposes, just show success message
-                setTimeout(() => {
-                    alert('School updated successfully! (Demo)');
+                console.log('📝 Updating school ID:', schoolId);
+                
+                // Submit to the edit endpoint
+                const response = await fetch(`/admin/edit/${schoolId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    console.log('✅ School updated successfully!');
+                    alert('School updated successfully!');
                     closeEditSchoolModal();
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Update School';
-                    document.getElementById('removeImageFlag').value = 'false';
-                }, 1000);
+                    // Reload the page to show updated data
+                    window.location.reload();
+                } else {
+                    throw new Error('Server returned ' + response.status);
+                }
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1087,32 +1107,67 @@ function initializeCharts() {
         }
 
         // Submit reply
-        window.submitReply = async function(event) {
-            event.preventDefault();
-            
-            const feedbackId = document.getElementById('replyFeedbackId').value;
-            const replyMessage = document.getElementById('replyMessage').value;
-            
-            if (!replyMessage.trim()) {
-                alert('Please enter a reply message');
-                return;
-            }
-            
-            try {
-                // For demo purposes, just show success message
-                alert('Reply submitted successfully! (Demo)');
-                closeReplyModal();
-                
-                // Reload feedback to show the reply
-                setTimeout(() => {
-                    loadRecentFeedback();
-                }, 300);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error submitting reply. Please try again.');
-            }
+       // Submit reply - FIXED VERSION
+window.submitReply = async function(event) {
+    event.preventDefault();
+    
+    const feedbackId = document.getElementById('replyFeedbackId').value;
+    const replyMessage = document.getElementById('replyMessage').value;
+    
+    if (!replyMessage.trim()) {
+        alert('Please enter a reply message');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/feedback/${feedbackId}/reply`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reply: replyMessage
+            })
+        });
+        
+        if (response.ok) {
+            alert('Reply submitted successfully!');
+            closeReplyModal();
+            // Reload feedback to show the reply
+            loadRecentFeedback();
+        } else {
+            throw new Error('Server returned ' + response.status);
         }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error submitting reply. Please try again.');
+    }
+}
+
+// Delete feedback function - FIXED VERSION
+window.deleteFeedback = async function(feedbackId) {
+    if (!confirm('Are you sure you want to delete this feedback? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/feedback/${feedbackId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert('Feedback deleted successfully!');
+            loadRecentFeedback(); // Refresh the feedback list
+        } else {
+            throw new Error('Server returned ' + response.status);
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error deleting feedback. Please try again.');
+    }
+}
 
         // Delete feedback function
         window.deleteFeedback = async function(feedbackId) {

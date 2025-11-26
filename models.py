@@ -1,9 +1,11 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
 class School(db.Model):
+    __tablename__ = 'school'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     region = db.Column(db.String(100), nullable=False)
@@ -13,6 +15,11 @@ class School(db.Model):
     accessibility = db.Column(db.Text, nullable=True)
     fee_structure = db.Column(db.String(200), nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
+    
+    # cascade relationships
+    principals = db.relationship('Principal', backref='school', cascade='all, delete-orphan', lazy=True)
+    feedbacks = db.relationship('Feedback', backref='school', cascade='all, delete-orphan', lazy=True)
+    meetings = db.relationship('MeetingBooking', backref='school', cascade='all, delete-orphan', lazy=True)
     
     def to_dict(self):
         return {
@@ -27,9 +34,39 @@ class School(db.Model):
             "image_url": self.image_url
         }
 
-class Principal(db.Model):
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+    
     id = db.Column(db.Integer, primary_key=True)
-    school_id = db.Column(db.Integer, db.ForeignKey('school.id'), unique=True)
+    school_id = db.Column(db.Integer, db.ForeignKey('school.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    
+    admin_reply = db.Column(db.Text, nullable=True)
+    reply_date = db.Column(db.DateTime, nullable=True)
+
+   
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "school_id": self.school_id,
+            "name": self.name,
+            "email": self.email,
+            "message": self.message,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "admin_reply": self.admin_reply,
+            "reply_date": self.reply_date.isoformat() if self.reply_date else None
+        }
+
+class Principal(db.Model):
+    __tablename__ = 'principal'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    school_id = db.Column(db.Integer, db.ForeignKey('school.id', ondelete='CASCADE'), unique=True)
     name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20))
@@ -43,7 +80,10 @@ class Principal(db.Model):
     verification_token = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    school = db.relationship('School', backref=db.backref('principal', uselist=False))
+    #cascade to meetings relationship
+    meetings = db.relationship('MeetingBooking', backref='principal', cascade='all, delete-orphan', lazy=True)
+
+    
 
     def to_dict(self):
         return {
@@ -62,9 +102,11 @@ class Principal(db.Model):
         }
 
 class MeetingBooking(db.Model):
+    __tablename__ = 'meeting_booking'
+    
     id = db.Column(db.Integer, primary_key=True)
-    school_id = db.Column(db.Integer, db.ForeignKey('school.id'), nullable=False)
-    principal_id = db.Column(db.Integer, db.ForeignKey('principal.id'), nullable=False)
+    school_id = db.Column(db.Integer, db.ForeignKey('school.id', ondelete='CASCADE'), nullable=False)
+    principal_id = db.Column(db.Integer, db.ForeignKey('principal.id', ondelete='CASCADE'), nullable=False)
     user_name = db.Column(db.String(200), nullable=False)
     user_email = db.Column(db.String(120), nullable=False)
     user_phone = db.Column(db.String(20))
@@ -74,9 +116,7 @@ class MeetingBooking(db.Model):
     special_requirements = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # ✅ FIXED: Use DIFFERENT backref names to avoid conflict
-    school = db.relationship('School', backref=db.backref('school_meetings', lazy=True))
-    principal = db.relationship('Principal', backref=db.backref('principal_meetings', lazy=True))
+    
 
     def to_dict(self):
         return {

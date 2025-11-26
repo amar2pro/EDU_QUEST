@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from models import db, School,Principal,MeetingBooking
+from models import db, School,Principal,Feedback,MeetingBooking
 
 # ---------------------
 # App Configuration
@@ -31,26 +31,7 @@ CORS(app)
 # ---------------------
 # Models
 # ---------------------
-class Feedback(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    school_id = db.Column(db.Integer, db.ForeignKey('school.id'), nullable=False)
-    name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), nullable=True)
-    message = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationship to School
-    school = db.relationship('School', backref=db.backref('feedbacks', lazy=True))
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "school_id": self.school_id,
-            "name": self.name,
-            "email": self.email,
-            "message": self.message,
-            "created_at": self.created_at.isoformat()
-        }
 
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -64,232 +45,35 @@ class Admin(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-# ---------------------
+
 # Database Initialization
-# ---------------------
-def init_db(seed=True):
+def init_db(seed=False):  # Changed to False to prevent auto-seeding
     with app.app_context():
         db.create_all()
 
-
-    # create default admin
+    # create default admin only - NO SAMPLE SCHOOLS
     if not Admin.query.filter_by(username='admin').first():
         admin = Admin(username='admin')
-        admin.set_password('admin123')  # change later
+        admin.set_password('admin123')  # change later for production
         db.session.add(admin)
         db.session.commit()
+        print("✅ Default admin created: admin/admin123")
+    
+    print("✅ Database initialized with NO sample schools")
+    
 
-    # seed data if enabled and schools table is empty
-    if seed and not School.query.first():
-        samples = [
-            # --- Nairobi (10 schools) ---
-            School(
-                name="Holmeside School",
-                region="Nairobi",
-                level="Primary/Secondary",
-                contact="0722123123",
-                description="Provides inclusive education for learners with diverse developmental needs.",
-                accessibility="Adaptive classrooms, occupational therapy, learning support.",
-                fee_structure="KES 35,000–50,000 per term",
-                image_url="/static/images/holmeside.jpg"
-            ),
-            School(
-                name="Jacaranda Special School",
-                region="Nairobi",
-                level="Primary",
-                contact="0721998877",
-                description="Supports children with physical and hearing disabilities in a nurturing environment.",
-                accessibility="Wheelchair ramps, therapy units, sign language instruction.",
-                fee_structure="KES 30,000–45,000 per term",
-                image_url="/static/images/jacaranda.jpg"
-            ),
-            School(
-                name="Treeside Special School",
-                region="Nairobi",
-                level="Primary",
-                contact="0705123456",
-                description="Provides individualized education for children with intellectual disabilities.",
-                accessibility="Small class sizes, sensory rooms, trained caregivers.",
-                fee_structure="KES 25,000–40,000 per term",
-                image_url="/static/images/treeside.jpg"
-            ),
-            School(
-                name="Kenya Community Centre for Learning",
-                region="Nairobi",
-                level="Primary/Secondary",
-                contact="0733123456",
-                description="Integrates mainstream and special-needs learners in a supportive environment.",
-                accessibility="Assistive technology, inclusive programs, counselor support.",
-                fee_structure="KES 45,000–70,000 per term",
-                image_url="/static/images/kccl.jpg"
-            ),
-            School(
-                name="Heshima Children Center",
-                region="Nairobi",
-                level="Primary",
-                contact="0704567890",
-                description="Focuses on holistic education for children with autism and communication challenges.",
-                accessibility="Autism-trained teachers, sensory aids, therapy programs.",
-                fee_structure="KES 40,000–55,000 per term",
-                image_url="/static/images/heshima.jpg"
-            ),
-            School(
-                name="Inclusive Academy Nairobi",
-                region="Nairobi",
-                level="Primary",
-                contact="0711001100",
-                description="Blends inclusive learning strategies with personalized support.",
-                accessibility="Braille-friendly materials, low-vision aids, peer mentoring.",
-                fee_structure="KES 38,000–60,000 per term",
-                image_url="/static/images/inclusive_academy.jpg"
-            ),
-            School(
-                name="Unity Inclusive School Nairobi",
-                region="Nairobi",
-                level="Secondary",
-                contact="0711888999",
-                description="Promotes equality and accessible learning for differently-abled learners.",
-                accessibility="Hearing devices, tactile maps, accessible labs.",
-                fee_structure="KES 50,000–75,000 per term",
-                image_url="/static/images/unity_inclusive.jpg"
-            ),
-            School(
-                name="Bright Future Special School Nairobi",
-                region="Nairobi",
-                level="Primary",
-                contact="0709988776",
-                description="Specialized programs for children with intellectual and physical disabilities.",
-                accessibility="Physiotherapy room, specialized support teachers.",
-                fee_structure="KES 35,000–55,000 per term",
-                image_url="/static/images/bright_future_nrb.jpg"
-            ),
-            School(
-                name="Adaptive Learning Centre Nairobi",
-                region="Nairobi",
-                level="Vocational",
-                contact="0711445566",
-                description="Prepares learners with disabilities for independent and vocational life.",
-                accessibility="Vocational units, life-skill workshops, guided learning.",
-                fee_structure="KES 40,000–50,000 per term",
-                image_url="/static/images/adaptive_centre.jpg"
-            ),
-            School(
-                name="Empower Special Needs School Nairobi",
-                region="Nairobi",
-                level="Primary/Secondary",
-                contact="0799123456",
-                description="Dedicated to learners with multiple disabilities.",
-                accessibility="Multi-sensory learning materials, accessible transport.",
-                fee_structure="KES 45,000–70,000 per term",
-                image_url="/static/images/empower_nrb.jpg"
-            ),
 
-            # --- Kiambu (10 schools) ---
-            School(
-                name="PCEA Kambui School for the Deaf",
-                region="Kiambu",
-                level="Primary/Secondary",
-                contact="0712333444",
-                description="Caters for hearing-impaired students with a strong academic and vocational focus.",
-                accessibility="Sign language curriculum, hearing aids, therapy services.",
-                fee_structure="KES 30,000–50,000 per term",
-                image_url="/static/images/kambui.jpg"
-            ),
-            School(
-                name="S.A. High School for the Blind",
-                region="Kiambu",
-                level="Secondary",
-                contact="0700112233",
-                description="Provides quality education for blind and visually impaired learners.",
-                accessibility="Braille materials, tactile teaching aids, mobility training.",
-                fee_structure="KES 35,000–60,000 per term",
-                image_url="/static/images/sa_high.jpg"
-            ),
-            School(
-                name="Kiambu Inclusive Education School",
-                region="Kiambu",
-                level="Primary",
-                contact="0709445566",
-                description="Integrates children with mild disabilities into regular classrooms with support.",
-                accessibility="Teaching assistants, adaptive PE programs.",
-                fee_structure="KES 25,000–45,000 per term",
-                image_url="/static/images/kiambu_inclusive.jpg"
-            ),
-            School(
-                name="Future Steps Special School Kiambu",
-                region="Kiambu",
-                level="Primary",
-                contact="0712003300",
-                description="Provides personalized support for learners with developmental delays.",
-                accessibility="Therapy sessions, structured classrooms, small groups.",
-                fee_structure="KES 30,000–50,000 per term",
-                image_url="/static/images/future_steps.jpg"
-            ),
-            School(
-                name="Greenfield Special Centre Kiambu",
-                region="Kiambu",
-                level="Primary",
-                contact="0712333222",
-                description="Focus on physical and speech impairments.",
-                accessibility="Speech therapy, adapted furniture, sensory play.",
-                fee_structure="KES 30,000–55,000 per term",
-                image_url="/static/images/greenfield_kiambu.jpg"
-            ),
-            School(
-                name="Support & Inclusion School Kiambu",
-                region="Kiambu",
-                level="Secondary",
-                contact="0712789456",
-                description="Committed to inclusive secondary education for learners with disabilities.",
-                accessibility="Accessible science labs, counseling, peer mentorship.",
-                fee_structure="KES 45,000–70,000 per term",
-                image_url="/static/images/support_inclusion.jpg"
-            ),
-            School(
-                name="Accessible Learning School Kiambu",
-                region="Kiambu",
-                level="Primary/Secondary",
-                contact="0709988775",
-                description="Promotes accessible education using assistive technology.",
-                accessibility="Smartboards, text-to-speech tools, digital learning aids.",
-                fee_structure="KES 40,000–60,000 per term",
-                image_url="/static/images/accessible_learning.jpg"
-            ),
-            School(
-                name="New Horizons Special School Kiambu",
-                region="Kiambu",
-                level="Vocational",
-                contact="0712888999",
-                description="Equips learners with practical skills for independence.",
-                accessibility="Vocational training units, accessible workshops.",
-                fee_structure="KES 35,000–55,000 per term",
-                image_url="/static/images/new_horizons.jpg"
-            ),
-            School(
-                name="Pathway Inclusive School Kiambu",
-                region="Kiambu",
-                level="Primary",
-                contact="0712998877",
-                description="Fosters an inclusive environment for all learners.",
-                accessibility="Play therapy, sign language sessions, sensory integration.",
-                fee_structure="KES 30,000–45,000 per term",
-                image_url="/static/images/pathway.jpg"
-            ),
-            School(
-                name="Bright Light Special Needs Centre Kiambu",
-                region="Kiambu",
-                level="Secondary",
-                contact="0712456789",
-                description="Supports learners with multiple disabilities through individual plans.",
-                accessibility="Occupational therapy, low-vision devices, ramps.",
-                fee_structure="KES 40,000–65,000 per term",
-                image_url="/static/images/bright_light.jpg"
-            ),
-        ]
-
-        db.session.bulk_save_objects(samples)
+#THIS IS TO FORCE DATABASE OPERATIONS
+def force_db_commit():
+    try:
         db.session.commit()
-
+        print("✅ DATABASE COMMITTED!")
+        return True
+    except Exception as e:
+        print(f"❌ COMMIT FAILED: {e}")
+        db.session.rollback()
+        return False
+    
 # ---------------------
 # Frontend routes (templates will be added later)
 # ---------------------
@@ -322,10 +106,6 @@ def api_schools():
             "image_url": s.image_url
         } for s in schools
     ])
-# Route for the add-school form
-@app.route('/add-school')
-def add_school_page():
-    return render_template('add-school.html')
 
 # Route for the admin dashboard
 @app.route('/admin-dashboard')
@@ -457,16 +237,52 @@ def update_school(id):
 # DELETE A SCHOOL FROM DATABASE
 @app.route('/api/schools/<int:id>', methods=['DELETE'])
 def delete_school(id):
-    # if not session.get('admin_logged_in'):
-        # return jsonify({"error": "Unauthorized"}), 401
-    s = School.query.get_or_404(id)
-    db.session.delete(s)
-    db.session.commit()
-    return jsonify({"message": "Deleted"}), 200
+    print(f"DELETING SCHOOL ID: {id} - WITH CASCADE")
+    
+    try:
+        school = School.query.get(id)
+        if not school:
+            print(f"❌ SCHOOL {id} NOT FOUND!")
+            return jsonify({"error": "School not found"}), 404
+            
+        print(f"DELETING SCHOOL: {school.name} (ID: {school.id})")
+        print(f"Associated principals: {len(school.principals)}")
+        print(f"Associated feedback: {len(school.feedbacks)}")
+        print(f"Associated meetings: {len(school.meetings)}")
+        
+        # Manual cleanup (backup in case cascade doesn't work)
+        for principal in school.principals:
+            print(f"Deleting principal: {principal.name} (ID: {principal.id})")
+        
+        for feedback in school.feedbacks:
+            print(f"Deleting feedback: {feedback.id}")
+            
+        for meeting in school.meetings:
+            print(f"Deleting meeting: {meeting.id}")
+        
+        # Delete associated image file if exists
+        if school.image_url and school.image_url != "/static/images/default-school.jpg":
+            try:
+                image_path = school.image_url.replace('/static/', 'static/')
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                    print(f"DELETED IMAGE FILE: {image_path}")
+            except Exception as e:
+                print(f"Could not delete image file: {e}")
+        
+        # Delete the school (should cascade to principals, feedback, meetings)
+        db.session.delete(school)
+        db.session.commit()
+        
+        print(f"SCHOOL {id} AND ALL ASSOCIATED DATA DELETED SUCCESSFULLY!")
+        return jsonify({"message": "School and all associated data deleted"}), 200
+        
+    except Exception as e:
+        print(f"DELETE ERROR: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
 
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 #ROUTE FOR CONFIRMING  PRINCIPAL MODEL EXISTS
 @app.route('/update-db', methods=['GET'])
@@ -638,6 +454,32 @@ def delete_school_image(school_id):
         return jsonify({'error': str(e)}), 500
     
     #ROUTE FOR PRINCIPALS
+@app.route('/debug-principals')
+def debug_principals():
+    """Check all principals in database"""
+    try:
+        principals = Principal.query.all()
+        
+        principals_data = []
+        for principal in principals:
+            principals_data.append({
+                "id": principal.id,
+                "name": principal.name,
+                "email": principal.email,
+                "school_id": principal.school_id,
+                "is_active": principal.is_active,
+                "created_at": getattr(principal, 'created_at', 'N/A')
+            })
+        
+        return jsonify({
+            "total_principals": len(principals),
+            "principals": principals_data
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
 @app.route('/api/principals/register', methods=['POST'])
 def register_principal():
     try:
@@ -761,12 +603,14 @@ def update_principal_profile():
 # FEEDBACK
 @app.route('/admin/feedback')
 def admin_feedback_page():
+    """Render the admin feedback management page"""
     return render_template('admin-feedback.html')
 
 @app.route('/api/all-schools')
 def all_schools():
+    """Get all schools for feedback filtering"""
     try:
-        schools = School.query.all()  # Or however you query schools
+        schools = School.query.all()
         
         schools_data = []
         for school in schools:
@@ -775,7 +619,7 @@ def all_schools():
                 "name": school.name,
                 "region": school.region,
                 "level": school.level,
-                "contact": getattr(school, 'contact', '')  # Handle optional fields
+                "contact": getattr(school, 'contact', '')
             })
         
         return jsonify(schools_data)
@@ -783,7 +627,7 @@ def all_schools():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Helper function to convert feedback row to dict
+# Helper function to convert feedback row to dict - KEEP THIS AS IS
 def feedback_to_dict(row):
     return {
         'id': row[0],
@@ -794,73 +638,143 @@ def feedback_to_dict(row):
         'created_at': row[5],
         'admin_reply': row[6],
         'reply_date': row[7],
-        'school_name': 'School ' + str(row[1])  # Simple school name
+        'school_name': 'School ' + str(row[1])
     }
 
 @app.route('/api/feedback', methods=['POST'])
 def post_feedback():
+    """Submit new feedback from users"""
     data = request.json or {}
-    conn = sqlite3.connect('eduquest.db')
-    cursor = conn.cursor()
     
-    cursor.execute(
-        "INSERT INTO feedback (school_id, name, email, message, created_at) VALUES (?, ?, ?, ?, ?)",
-        (data.get('school_id'), data.get('name'), data.get('email'), data.get('message'), datetime.now())
-    )
-    conn.commit()
-    feedback_id = cursor.lastrowid
-    conn.close()
-    
-    return jsonify({'id': feedback_id, 'message': 'Feedback submitted'}), 201
+    try:
+        # USE SQLALCHEMY INSTEAD OF RAW SQLITE
+        feedback = Feedback(
+            school_id=data.get('school_id'),
+            name=data.get('name'),
+            email=data.get('email'),
+            message=data.get('message'),
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(feedback)
+        db.session.commit()
+        
+        print(f"✅ FEEDBACK SUBMITTED: ID {feedback.id}")
+        return jsonify({'id': feedback.id, 'message': 'Feedback submitted'}), 201
+        
+    except Exception as e:
+        print(f"❌ FEEDBACK SUBMIT ERROR: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/feedback', methods=['GET'])
 def get_feedbacks():
-    conn = sqlite3.connect('eduquest.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM feedback ORDER BY created_at DESC")
-    feedbacks = [feedback_to_dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(feedbacks), 200
+    """Get all feedback for admin dashboard"""
+    try:
+        print("🔄 GET_FEEDBACKS CALLED")
+        
+        feedbacks = Feedback.query.order_by(Feedback.created_at.desc()).all()
+        print(f"✅ FOUND {len(feedbacks)} FEEDBACK ENTRIES")
+        
+        # SIMPLIFIED VERSION - Use the model's to_dict method
+        feedbacks_data = [f.to_dict() for f in feedbacks]
+        
+        print("✅ SUCCESS: Returning feedback data")
+        return jsonify(feedbacks_data), 200
+        
+    except Exception as e:
+        print(f"❌ GET FEEDBACKS ERROR: {e}")
+        import traceback
+        print(f"🔍 FULL TRACEBACK: {traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
 
+
+#ROUTE TO CONFIRM FEEDBACK MODEL EXISTS
+@app.route('/update-feedback-model')
+def update_feedback_model():
+    """Emergency route to update Feedback model with new fields"""
+    try:
+        with app.app_context():
+            db.create_all()
+        return "✅ Feedback model updated with admin_reply and reply_date fields!"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+    
+#ROUTE FOR REPLYING TO FEEDBACK - FIXED
 @app.route('/api/feedback/<int:feedback_id>/reply', methods=['POST'])
 def reply_to_feedback(feedback_id):
+    """Admin replies to specific feedback"""
     data = request.json
     reply_message = data.get('reply')
     
-    conn = sqlite3.connect('eduquest.db')
-    cursor = conn.cursor()
+    print(f"🔄 REPLYING TO FEEDBACK {feedback_id}: {reply_message}")
     
-    cursor.execute(
-        "UPDATE feedback SET admin_reply = ?, reply_date = ? WHERE id = ?",
-        (reply_message, datetime.now(), feedback_id)
-    )
-    conn.commit()
-    conn.close()
-    
-    return jsonify({"message": "Reply added successfully"})
+    try:
+        # USE SQLALCHEMY INSTEAD OF RAW SQLITE
+        feedback = Feedback.query.get(feedback_id)
+        if feedback:
+            feedback.admin_reply = reply_message
+            feedback.reply_date = datetime.utcnow()
+            
+            db.session.commit()
+            print(f"✅ REPLY ADDED TO FEEDBACK {feedback_id}")
+            return jsonify({"message": "Reply added successfully"})
+        else:
+            return jsonify({"error": "Feedback not found"}), 404
+            
+    except Exception as e:
+        print(f"❌ REPLY ERROR: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
+#ROUTE FOR DELETING FEEDBACK - FIXED
 @app.route('/api/feedback/<int:feedback_id>', methods=['DELETE'])
 def delete_feedback(feedback_id):
-    conn = sqlite3.connect('eduquest.db')
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM feedback WHERE id = ?", (feedback_id,))
-    conn.commit()
-    conn.close()
+    """Delete specific feedback"""
+    print(f"🔄 DELETING FEEDBACK {feedback_id}")
     
-    return jsonify({"message": "Feedback deleted successfully"})
+    try:
+        # USE SQLALCHEMY INSTEAD OF RAW SQLITE
+        feedback = Feedback.query.get(feedback_id)
+        if feedback:
+            db.session.delete(feedback)
+            db.session.commit()
+            print(f"✅ FEEDBACK {feedback_id} DELETED")
+            return jsonify({"message": "Feedback deleted successfully"})
+        else:
+            return jsonify({"error": "Feedback not found"}), 404
+            
+    except Exception as e:
+        print(f"❌ DELETE ERROR: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/schools/<int:school_id>/feedback')
 def get_school_feedback(school_id):
-    conn = sqlite3.connect('eduquest.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM feedback WHERE school_id = ? ORDER BY created_at DESC", (school_id,))
-    feedbacks = [feedback_to_dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(feedbacks)
+    """Get feedback for a specific school"""
+    try:
+        # USE SQLALCHEMY INSTEAD OF RAW SQLITE
+        feedbacks = Feedback.query.filter_by(school_id=school_id).order_by(Feedback.created_at.desc()).all()
+        feedbacks_data = [{
+            'id': f.id,
+            'school_id': f.school_id,
+            'name': f.name,
+            'email': f.email,
+            'message': f.message,
+            'created_at': f.created_at.isoformat() if f.created_at else None,
+            'admin_reply': f.admin_reply,
+            'reply_date': f.reply_date.isoformat() if f.reply_date else None,
+            'school_name': f.school.name if f.school else f"School {f.school_id}"
+        } for f in feedbacks]
+        
+        return jsonify(feedbacks_data)
+        
+    except Exception as e:
+        print(f"❌ GET SCHOOL FEEDBACK ERROR: {e}")
+        return jsonify({"error": str(e)}), 500
 
-# SCHOOL DETAILS ROUTE 
-from datetime import datetime  # Make sure this import is at the top
 
+#SCHOOL DETAILS ROUTE
 @app.route('/school/<int:id>')
 def school_details(id):
     school = School.query.get_or_404(id)
@@ -878,66 +792,174 @@ def school_details(id):
                          principal=principal,
                          now=datetime.now())  
 
- # ADD-SCHOOL ROUTE TO HANDLE FORM SUBMISSION
+ #ROUTE FOR ADDING SCHOOLS ON THE ADMIN DASHBOARD
 @app.route('/add-school', methods=['POST'])
 def submit_school_form():
+    print("🔄 ADD SCHOOL FORM SUBMITTED!")
+    
+    # Get form data
     name = request.form.get('name')
-    region = request.form.get('region')
+    region = request.form.get('region') 
     level = request.form.get('level')
     description = request.form.get('description')
     contact = request.form.get('contact')
     accessibility = request.form.get('accessibility')
     fee_structure = request.form.get('fee_structure')
-    image_url = request.form.get('image_url')
+    
+    print(f"📝 FORM DATA: {name}, {region}, {level}")
 
-    # ✅ Create and save new school
-    new_school = School(
-        name=name,
-        region=region,
-        level=level,
-        description=description,
-        contact=contact,
-        accessibility=accessibility,
-        fee_structure=fee_structure,
-        image_url=image_url
-    )
+    # Handle file upload - BACKEND SOLUTION (like principal dashboard)
+    image_url = "/static/images/default-school.jpg"  # default
+    
+    if 'school_image' in request.files:
+        file = request.files['school_image']
+        if file and file.filename != '' and allowed_file(file.filename):
+            print(f"📁 FILE UPLOAD DETECTED: {file.filename}")
+            
+            # Generate unique filename
+            filename = secure_filename(file.filename)
+            unique_filename = f"school_{int(time.time())}_{filename}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            # Save file to folder
+            file.save(file_path)
+            image_url = f"/static/images/schools/{unique_filename}"
+            print(f"✅ IMAGE SAVED TO: {image_url}")
+        else:
+            print("📁 NO VALID FILE UPLOADED, USING DEFAULT IMAGE")
 
-    db.session.add(new_school)
-    db.session.commit()
+    # Validate required fields
+    if not name or not region:
+        print("❌ MISSING REQUIRED FIELDS!")
+        return redirect('/admin-dashboard')
 
-    # Redirect back to dashboard
+    try:
+        # Create and save new school
+        new_school = School(
+            name=name,
+            region=region,
+            level=level,
+            description=description,
+            contact=contact,
+            accessibility=accessibility,
+            fee_structure=fee_structure,
+            image_url=image_url
+        )
+
+        print(f"🎯 CREATING SCHOOL OBJECT: {new_school.name}")
+        
+        db.session.add(new_school)
+        print("✅ SCHOOL ADDED TO SESSION")
+        
+        # FORCE COMMIT
+        db.session.commit()
+        print("✅ DATABASE COMMITTED!")
+        
+        # VERIFY IMMEDIATELY
+        saved_school = School.query.get(new_school.id)
+        if saved_school:
+            print(f"🎉 VERIFICATION SUCCESS: School {saved_school.id} - '{saved_school.name}' saved in database!")
+            
+            # Check all schools count
+            all_schools = School.query.all()
+            print(f"📊 TOTAL SCHOOLS IN DATABASE: {len(all_schools)}")
+            for s in all_schools:
+                print(f"   - {s.id}: {s.name}")
+        else:
+            print("❌ VERIFICATION FAILED: School not found after commit!")
+
+    except Exception as e:
+        print(f"❌ DATABASE ERROR: {str(e)}")
+        import traceback
+        print(f"🔍 FULL ERROR: {traceback.format_exc()}")
+        db.session.rollback()
+        return redirect('/admin-dashboard')
+
     return redirect('/admin-dashboard')
 
-#ROUTE FOR THE ADMIN-DASHBOARD TO REDIRECT TO EDIT-SCHOOLS
-@app.route('/admin/edit/<int:id>')
-def edit_school_page(id):
-    school = School.query.get_or_404(id)
-    return render_template('edit-school.html', school=school)
+# ADD THIS DEBUG ROUTE TO CHECK SCHOOLS
+@app.route('/debug-schools')
+def debug_schools():
+    """Debug route to check all schools in database"""
+    try:
+        schools = School.query.all()
+        schools_data = []
+        for school in schools:
+            schools_data.append({
+                "id": school.id,
+                "name": school.name,
+                "region": school.region,
+                "level": school.level,
+                "contact": school.contact,
+                "image_url": school.image_url,
+                "created_at": getattr(school, 'created_at', 'N/A')
+            })
+        return jsonify({
+            "total_schools": len(schools),
+            "schools": schools_data
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+          
 
-# This updates the changes made to schools to the database
+#ROUTE FOR EDITING SCHOOLS ON THE ADMIN DASHBOARD
 @app.route('/admin/edit/<int:id>', methods=['POST'])
 def update_school_form(id):
+    print(f"🔄 EDITING SCHOOL ID: {id}")
+    
     school = School.query.get_or_404(id)
+    print(f"📝 FOUND SCHOOL TO EDIT: {school.name}")
     
     # Update fields from form inputs
-    school.name = request.form.get('name')
-    school.region = request.form.get('region')
-    school.level = request.form.get('level')
-    school.description = request.form.get('description')
-    school.contact = request.form.get('contact')
-    school.accessibility = request.form.get('accessibility')
-    school.fee_structure = request.form.get('fee_structure')
-    school.image_url = request.form.get('image_url')
+    school.name = request.form.get('name', school.name)
+    school.region = request.form.get('region', school.region)
+    school.level = request.form.get('level', school.level)
+    school.description = request.form.get('description', school.description)
+    school.contact = request.form.get('contact', school.contact)
+    school.accessibility = request.form.get('accessibility', school.accessibility)
+    school.fee_structure = request.form.get('fee_structure', school.fee_structure)
     
-    db.session.commit()
+    print(f"UPDATED DATA: {school.name}, {school.region}")
+
+    # Handle image upload for edit
+    if 'school_image' in request.files:
+        file = request.files['school_image']
+        if file and file.filename != '' and allowed_file(file.filename):
+            print(f"NEW IMAGE UPLOADED: {file.filename}")
+            
+            # Delete old image if it exists and isn't default
+            if school.image_url and school.image_url != "/static/images/default-school.jpg":
+                try:
+                    old_image_path = school.image_url.replace('/static/', 'static/')
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                        print(f"DELETED OLD IMAGE: {old_image_path}")
+                except Exception as e:
+                    print(f"Could not delete old image: {e}")
+            
+            # Save new image
+            filename = secure_filename(file.filename)
+            unique_filename = f"school_{id}_{int(time.time())}_{filename}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            file.save(file_path)
+            school.image_url = f"/static/images/schools/{unique_filename}"
+            print(f"NEW IMAGE SAVED: {school.image_url}")
+    
+    try:
+        db.session.commit()
+        print("SCHOOL UPDATED SUCCESSFULLY!")
+    except Exception as e:
+        print(f"❌ UPDATE ERROR: {str(e)}")
+        db.session.rollback()
+    
     return redirect('/admin-dashboard')
 
-
-# Dev helper: init-db route
+# Dev helper: init-db route 
 @app.route('/init-db', methods=['GET'])
 def init_db_route():
-    init_db(seed=True)
-    return jsonify({"message": "Database initialized (seeded). Default admin: admin/admin123"}), 200
+    init_db(seed=False)  # Changed to False
+    return jsonify({"message": "Database initialized (NO sample data). Default admin: admin/admin123"}), 200
 
 # ---------------------
 # Run
