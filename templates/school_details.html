@@ -541,6 +541,21 @@ async function loadSchoolFeedback(schoolId) {
                         <p class="text-blue-800">${feedback.admin_reply}</p>
                     </div>
                     ` : ''}
+                    
+                    ${feedback.principal_reply ? `
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mt-3">
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
+                                P
+                            </div>
+                            <span class="font-semibold text-green-900">Principal's Response</span>
+                        </div>
+                        <p class="text-green-800">${feedback.principal_reply}</p>
+                        ${feedback.principal_reply_date ? `
+                        <p class="text-xs text-green-600 mt-2">Replied on: ${new Date(feedback.principal_reply_date).toLocaleDateString()}</p>
+                        ` : ''}
+                    </div>
+                    ` : ''}
                 </div>
             `).join('');
         } else {

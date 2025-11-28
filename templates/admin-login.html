@@ -3,21 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          eduorange: '#FF7F32', // your EduQuest orange
-        }
-      }
-    }
-  }
-</script>
-<script src="https://cdn.tailwindcss.com"></script>
+    <title>Admin Login - EDUQUEST</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                EDUQUEST Admin
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Administrative Access Only
+            </p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} bg-{% if category == 'success' %}green{% else %}red{% endif %}-100 border border-{% if category == 'success' %}green{% else %}red{% endif %}-400 text-{% if category == 'success' %}green{% else %}red{% endif %}-700 px-4 py-3 rounded relative">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="adminLoginForm" class="mt-8 space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Admin Username</label>
+                <input id="username" name="username" type="text" required 
+                       class="mt-1 relative block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Enter admin username" value="admin">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input id="password" name="password" type="password" required 
+                       class="mt-1 relative block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Enter password" value="admin123">
+            </div>
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Sign in as Admin
+                </button>
+            </div>
+        </form>
+
+        <div id="message" class="hidden p-3 rounded-lg"></div>
+        
+        <div class="text-center text-sm text-gray-600">
+            <a href="/login" class="text-blue-600 hover:text-blue-500">← Back to User Login</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            const messageDiv = document.getElementById('message');
+            messageDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.className = 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative';
+                    messageDiv.textContent = '✅ Admin login successful! Redirecting...';
+                    messageDiv.classList.remove('hidden');
+                    
+                    // Redirect to admin dashboard
+                    setTimeout(() => {
+                        window.location.href = '/admin-dashboard';
+                    }, 1000);
+                } else {
+                    messageDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+                    messageDiv.textContent = '❌ ' + (data.error || 'Login failed');
+                    messageDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                messageDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+                messageDiv.textContent = '❌ Network error: ' + error;
+                messageDiv.classList.remove('hidden');
+            }
+        });
+    </script>
 </body>
 </html>

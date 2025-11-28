@@ -27,12 +27,13 @@
 
     <!-- Dashboard Content -->
     <main class="max-w-6xl mx-auto p-6">
-        <!-- Welcome & Quick Stats -->
+    
+      <!-- Welcome & Quick Stats -->
         <section class="bg-white rounded-xl shadow-md p-6 mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to Your Dashboard, {{ principal.name }}</h2>
             <p class="text-gray-600 mb-6">Manage your school profile and connect with your community.</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                 <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                     <div class="flex items-center">
                         <div class="p-2 bg-blue-100 rounded-lg mr-4">
@@ -49,30 +50,16 @@
                     </div>
                 </div>
 
-                <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
                     <div class="flex items-center">
-                        <div class="p-2 bg-green-100 rounded-lg mr-4">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        <div class="p-2 bg-orange-100 rounded-lg mr-4">
+                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                         </div>
                         <div>
-                            <p class="text-sm text-green-600">Pending Feedback</p>
-                            <p class="text-lg font-semibold text-green-900">0</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                    <div class="flex items-center">
-                        <div class="p-2 bg-purple-100 rounded-lg mr-4">
-                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm text-purple-600">Meeting Requests</p>
-                            <p class="text-lg font-semibold text-purple-900">0</p>
+                            <p class="text-sm text-orange-600">Quick Actions</p>
+                            <p class="text-lg font-semibold text-orange-900">Manage Below</p>
                         </div>
                     </div>
                 </div>
@@ -181,7 +168,7 @@
                 <section class="bg-white rounded-xl shadow-md p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
                     <div class="space-y-3">
-                        <button class="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition group">
+                        <button onclick="openFeedbackModal()" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition group">
                             <div class="flex items-center">
                                 <div class="p-2 bg-orange-100 rounded-lg mr-4 group-hover:bg-orange-200 transition">
                                     <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +182,7 @@
                             </div>
                         </button>
 
-                        <button class="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition group">
+                        <button onclick="openMeetingsModal()" class="w-full text-left p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition group">
                             <div class="flex items-center">
                                 <div class="p-2 bg-orange-100 rounded-lg mr-4 group-hover:bg-orange-200 transition">
                                     <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,20 +241,76 @@
                 </section>
             </div>
         </div>
-        <!-- Meeting Management Section -->
-            <section class="bg-white rounded-xl shadow-md p-6 mb-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-900">Meeting Requests</h3>
-                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium" id="meeting-count">
-                        {{ meetings|length }} Total
-                    </span>
-                </div>
+    </main>
 
-                <!-- Meeting Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-gray-900">Feedback Management</h3>
+                    <button onclick="closeFeedbackModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Feedback Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-blue-800" id="modal-total-feedback">0</p>
+                            <p class="text-sm text-blue-600">Total Feedback</p>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-green-800" id="modal-replied-feedback">0</p>
+                            <p class="text-sm text-green-600">Replied To</p>
+                        </div>
+                    </div>
                     <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                         <div class="text-center">
-                            <p class="text-2xl font-bold text-yellow-800" id="pending-count">
+                            <p class="text-2xl font-bold text-yellow-800" id="modal-pending-feedback">0</p>
+                            <p class="text-sm text-yellow-600">Pending Replies</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Feedback List -->
+                <div class="space-y-4" id="feedback-container">
+                    <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                        <p class="text-gray-500">Loading feedback...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meetings Modal -->
+    <div id="meetings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-gray-900">Meeting Requests</h3>
+                    <button onclick="closeMeetingsModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Meeting Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                    <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-yellow-800" id="modal-pending-count">
                                 {{ meetings|selectattr("status", "equalto", "pending")|list|length }}
                             </p>
                             <p class="text-sm text-yellow-600">Pending</p>
@@ -275,7 +318,7 @@
                     </div>
                     <div class="bg-green-50 rounded-lg p-4 border border-green-200">
                         <div class="text-center">
-                            <p class="text-2xl font-bold text-green-800" id="approved-count">
+                            <p class="text-2xl font-bold text-green-800" id="modal-approved-count">
                                 {{ meetings|selectattr("status", "equalto", "approved")|list|length }}
                             </p>
                             <p class="text-sm text-green-600">Approved</p>
@@ -283,7 +326,7 @@
                     </div>
                     <div class="bg-red-50 rounded-lg p-4 border border-red-200">
                         <div class="text-center">
-                            <p class="text-2xl font-bold text-red-800" id="declined-count">
+                            <p class="text-2xl font-bold text-red-800" id="modal-declined-count">
                                 {{ meetings|selectattr("status", "equalto", "declined")|list|length }}
                             </p>
                             <p class="text-sm text-red-600">Declined</p>
@@ -291,14 +334,16 @@
                     </div>
                     <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div class="text-center">
-                            <p class="text-2xl font-bold text-gray-800" id="completed-count">
+                            <p class="text-2xl font-bold text-gray-800" id="modal-completed-count">
                                 {{ meetings|selectattr("status", "equalto", "completed")|list|length }}
                             </p>
                             <p class="text-sm text-gray-600">Completed</p>
                         </div>
                     </div>
                 </div>
-
+            </div>
+            
+            <div class="p-6">
                 <!-- Meetings List -->
                 <div class="space-y-4" id="meetings-container">
                     {% if meetings %}
@@ -364,10 +409,11 @@
                         </div>
                     {% endif %}
                 </div>
-            </section>
-    </main>
+            </div>
+        </div>
+    </div>
 
-    <script>
+   <script>
     // Profile Photo Preview
     document.getElementById('profile-photo').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -395,7 +441,7 @@
             
             const response = await fetch('/api/principals/profile', {
                 method: 'POST',
-                body: formData  // Using FormData for file upload
+                body: formData
             });
             
             const result = await response.json();
@@ -420,30 +466,31 @@
     });
 
     // Meeting Management Functions
-async function updateMeetingStatus(meetingId, newStatus) {
-    if (!confirm(`Are you sure you want to ${newStatus} this meeting?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/meetings/${meetingId}/status`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ status: newStatus })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            alert(`Meeting ${newStatus} successfully!`);
-            location.reload(); // Refresh to show updated status
-        } else {
-            alert(result.error || 'Failed to update meeting status.');
+    async function updateMeetingStatus(meetingId, newStatus) {
+        if (!confirm(`Are you sure you want to ${newStatus} this meeting?`)) {
+            return;
         }
-    } catch (error) {
-        alert('Network error. Please try again.');
+
+        try {
+            const response = await fetch(`/api/meetings/${meetingId}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(`Meeting ${newStatus} successfully!`);
+                // Refresh the meetings modal
+                loadMeetingStats();
+            } else {
+                alert(result.error || 'Failed to update meeting status.');
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
     }
-}
 
     function logout() {
         fetch('/api/principals/logout', {
@@ -453,6 +500,246 @@ async function updateMeetingStatus(meetingId, newStatus) {
             window.location.href = '/';
         });
     }
-    </script>
+
+    // Update meeting stats when modal opens
+    async function loadMeetingStats() {
+        try {
+            const response = await fetch('/api/principal/meetings');
+            const meetings = await response.json();
+            
+            if (response.ok) {
+                const pending = meetings.filter(m => m.status === 'pending').length;
+                const approved = meetings.filter(m => m.status === 'approved').length;
+                const declined = meetings.filter(m => m.status === 'declined').length;
+                const completed = meetings.filter(m => m.status === 'completed').length;
+                
+                // Update modal stats
+                const elements = {
+                    'modal-pending-count': pending,
+                    'modal-approved-count': approved,
+                    'modal-declined-count': declined,
+                    'modal-completed-count': completed
+                };
+                
+                Object.keys(elements).forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = elements[id];
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error loading meeting stats:', error);
+        }
+    }
+
+    // Principal Feedback Management
+    async function loadPrincipalFeedback() {
+        try {
+            const response = await fetch('/api/principal/feedback');
+            const feedbacks = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(feedbacks.error || 'Failed to load feedback');
+            }
+            
+            displayFeedback(feedbacks);
+            updateFeedbackStats(feedbacks);
+        } catch (error) {
+            console.error('Error loading feedback:', error);
+            showNotification('Error loading feedback: ' + error.message, 'error');
+        }
+    }
+
+    function updateFeedbackStats(feedbacks) {
+        const total = feedbacks.length;
+        const replied = feedbacks.filter(f => f.principal_reply).length;
+        const pending = total - replied;
+        
+        // Safely update elements that exist
+        const elements = {
+            'total-feedback': total,
+            'replied-feedback': replied,
+            'pending-feedback': pending,
+            'feedback-count': `${total} Total`,
+            'modal-total-feedback': total,
+            'modal-replied-feedback': replied,
+            'modal-pending-feedback': pending
+        };
+        
+        // Update each element only if it exists
+        Object.keys(elements).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = elements[id];
+            }
+        });
+    }
+
+    function displayFeedback(feedbacks) {
+        const container = document.getElementById('feedback-container');
+        
+        if (!container) {
+            console.error('Feedback container not found');
+            return;
+        }
+        
+        if (feedbacks.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                    </svg>
+                    <p class="text-gray-500">No feedback received yet.</p>
+                    <p class="text-sm text-gray-400 mt-1">Feedback from parents will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = feedbacks.map(feedback => `
+            <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h4 class="font-semibold text-gray-900">${escapeHtml(feedback.name)}</h4>
+                        <p class="text-sm text-gray-600">${escapeHtml(feedback.email || 'No email provided')}</p>
+                        <p class="text-sm text-gray-500 mt-1">${new Date(feedback.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${feedback.principal_reply ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                        ${feedback.principal_reply ? 'Replied' : 'Pending Reply'}
+                    </span>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-gray-700">${escapeHtml(feedback.message)}</p>
+                </div>
+                
+                ${feedback.admin_reply ? `
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <strong class="text-blue-800 text-sm">Admin Response:</strong>
+                            <span class="text-blue-600 text-xs">
+                                ${feedback.reply_date ? new Date(feedback.reply_date).toLocaleDateString() : ''}
+                            </span>
+                        </div>
+                        <p class="text-blue-700 text-sm">${escapeHtml(feedback.admin_reply)}</p>
+                    </div>
+                ` : ''}
+                
+                ${feedback.principal_reply ? `
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <strong class="text-green-800 text-sm">Your Response:</strong>
+                            <span class="text-green-600 text-xs">
+                                ${feedback.principal_reply_date ? new Date(feedback.principal_reply_date).toLocaleDateString() : ''}
+                            </span>
+                        </div>
+                        <p class="text-green-700 text-sm">${escapeHtml(feedback.principal_reply)}</p>
+                    </div>
+                    <button onclick="editPrincipalReply(${feedback.id})" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Edit Reply
+                    </button>
+                ` : `
+                    <div class="mt-4">
+                        <textarea id="reply-text-${feedback.id}" 
+                                  placeholder="Write your response to this feedback..."
+                                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                  rows="3"></textarea>
+                        <div class="flex justify-end mt-2">
+                            <button onclick="submitPrincipalReply(${feedback.id})" 
+                                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                                Submit Reply
+                            </button>
+                        </div>
+                    </div>
+                `}
+            </div>
+        `).join('');
+    }
+
+    async function submitPrincipalReply(feedbackId) {
+        const replyText = document.getElementById(`reply-text-${feedbackId}`).value.trim();
+        
+        if (!replyText) {
+            alert('Please write a reply before submitting');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/principal/feedback/${feedbackId}/reply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reply: replyText })
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to submit reply');
+            }
+            
+            alert('Reply submitted successfully!');
+            loadPrincipalFeedback(); // Reload to show the reply
+        } catch (error) {
+            console.error('Error submitting reply:', error);
+            alert('Error submitting reply: ' + error.message);
+        }
+    }
+
+    function editPrincipalReply(feedbackId) {
+        alert('To edit your reply, please delete and rewrite your response.');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function showNotification(message, type = 'info') {
+        alert(message);
+    }
+
+    // Modal Functions
+    function openFeedbackModal() {
+        document.getElementById('feedback-modal').classList.remove('hidden');
+        loadPrincipalFeedback();
+    }
+
+    function closeFeedbackModal() {
+        document.getElementById('feedback-modal').classList.add('hidden');
+    }
+
+    function openMeetingsModal() {
+        document.getElementById('meetings-modal').classList.remove('hidden');
+        loadMeetingStats();
+    }
+
+    function closeMeetingsModal() {
+        document.getElementById('meetings-modal').classList.add('hidden');
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(event) {
+        const feedbackModal = document.getElementById('feedback-modal');
+        const meetingsModal = document.getElementById('meetings-modal');
+        
+        if (event.target === feedbackModal) {
+            closeFeedbackModal();
+        }
+        if (event.target === meetingsModal) {
+            closeMeetingsModal();
+        }
+    });
+
+    // Load feedback when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPrincipalFeedback();
+    });
+</script>
 </body>
 </html>

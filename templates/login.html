@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EduQuest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-orange-600">EduQuest</h1>
+            <p class="text-gray-600 mt-2">Access your account</p>
+        </div>
+
+        <!-- User Type Selection -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">I am a:</label>
+            <div class="grid grid-cols-2 gap-3"> <!-- CHANGED: 3 cols to 2 cols -->
+                <button type="button" id="userBtn" class="user-type-btn border-2 border-gray-300 rounded-lg py-3 px-4 text-center hover:border-orange-500 hover:bg-orange-50 transition active">
+                    <div class="text-orange-600 mb-1">
+                        <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium">Parent/User</span>
+                </button>
+                
+                <button type="button" id="principalBtn" class="user-type-btn border-2 border-gray-300 rounded-lg py-3 px-4 text-center hover:border-orange-500 hover:bg-orange-50 transition">
+                    <div class="text-orange-600 mb-1">
+                        <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium">Principal</span>
+                </button>
+                
+                <!-- REMOVED: Admin button completely -->
+            </div>
+            <input type="hidden" id="userType" name="user_type" value="user" required>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm">
+            <div class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input type="email" id="email" name="email" required 
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" name="password" required 
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button type="submit" class="w-full bg-orange-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-orange-700 transition focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+                    Sign In
+                </button>
+            </div>
+        </form>
+
+        <!-- Registration Links -->
+        <div class="mt-6 text-center space-y-2">
+            <p class="text-sm text-gray-600">
+                New user? <a href="/register" class="text-orange-600 hover:text-orange-700 font-medium">Sign up as Parent/Student</a>
+            </p>
+            <!-- ADDED: Admin login link -->
+            <p class="text-sm text-gray-600">
+                Administrator? <a href="/admin-login" class="text-orange-600 hover:text-orange-700 font-medium">Admin login</a>
+            </p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+    </div>
+
+    <script>
+        // User Type Selection
+        document.querySelectorAll('.user-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.user-type-btn').forEach(b => {
+                    b.classList.remove('active', 'border-orange-500', 'bg-orange-50');
+                    b.classList.add('border-gray-300');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active', 'border-orange-500', 'bg-orange-50');
+                this.classList.remove('border-gray-300');
+                
+                // Update hidden input
+                const userType = this.id.replace('Btn', '');
+                document.getElementById('userType').value = userType;
+            });
+        });
+
+        // Form Submission
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const errorDiv = document.getElementById('errorMessage');
+            
+            const formData = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                user_type: document.getElementById('userType').value
+            };
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing In...';
+                errorDiv.classList.add('hidden');
+                
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Redirect based on user type
+                    switch(formData.user_type) {
+                        case 'principal':
+                            window.location.href = '/principal-dashboard';
+                            break;
+                        case 'user':
+                            window.location.href = '/'; // Back to homepage for regular users
+                            break;
+                    }
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
+                
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+            }
+        });
+    </script>
+
+    <style>
+        .user-type-btn.active {
+            border-color: #E65C00;
+            background-color: #FEF6EE;
+        }
+    </style>
+</body>
+</html>
