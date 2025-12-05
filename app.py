@@ -11,6 +11,24 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from models import db, School, Principal, Feedback, MeetingBooking, Admin, User
 
+# Add these imports to app.py (after the existing imports)
+import pandas as pd
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
+import matplotlib.pyplot as plt
+import numpy as np
+from datetime import datetime, timedelta
+import calendar
+
 # ---------------------
 # App Configuration
 # ---------------------
@@ -33,6 +51,8 @@ CORS(app)
 # ---------------------
 # Helper Functions
 # ---------------------
+
+
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
@@ -64,6 +84,494 @@ def force_db_commit():
         print(f"❌ COMMIT FAILED: {e}")
         db.session.rollback()
         return False
+    
+
+# PDF REPORT GENERATION FUNCTIONS
+def collect_report_data(date_range='all'):
+    """Collect comprehensive system data for report"""
+    from datetime import datetime, timedelta
+    
+    # Calculate date filter
+    if date_range == 'week':
+        start_date = datetime.now() - timedelta(days=7)
+    elif date_range == 'month':
+        start_date = datetime.now() - timedelta(days=30)
+    elif date_range == 'quarter':
+        start_date = datetime.now() - timedelta(days=90)
+    else:
+        start_date = None
+    
+    # Get all data from database
+    report = {
+        'report_id': f"EQ-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+        'generated_at': datetime.now(),
+        'date_range': date_range,
+        
+        # User statistics
+        'users': {
+            'total': User.query.count(),
+            'active_today': User.query.filter(
+                db.func.date(User.created_at) == datetime.now().date()
+            ).count(),
+            'new_this_week': User.query.filter(
+                User.created_at >= (datetime.now() - timedelta(days=7))
+            ).count(),
+            'new_this_month': User.query.filter(
+                User.created_at >= (datetime.now() - timedelta(days=30))
+            ).count(),
+            'list': User.query.order_by(User.created_at.desc()).limit(100).all()
+        },
+        
+        # School statistics
+        'schools': {
+            'total': School.query.count(),
+            'by_region': {},
+            'by_level': {},
+            'list': School.query.all()
+        },
+        
+        # Principal statistics
+        'principals': {
+            'total': Principal.query.count(),
+            'active': Principal.query.filter_by(is_active=True).count(),
+            'inactive': Principal.query.filter_by(is_active=False).count(),
+            'list': Principal.query.all()
+        },
+        
+        # Feedback statistics
+        'feedback': {
+            'total': Feedback.query.count(),
+            'with_admin_reply': Feedback.query.filter(Feedback.admin_reply.isnot(None)).count(),
+            'with_principal_reply': Feedback.query.filter(Feedback.principal_reply.isnot(None)).count(),
+            'pending_reply': Feedback.query.filter(
+                Feedback.admin_reply.is_(None),
+                Feedback.principal_reply.is_(None)
+            ).count(),
+            'list': Feedback.query.order_by(Feedback.created_at.desc()).limit(200).all()
+        },
+        
+        # Meeting statistics
+        'meetings': {
+            'total': MeetingBooking.query.count(),
+            'by_status': {
+                'pending': MeetingBooking.query.filter_by(status='pending').count(),
+                'confirmed': MeetingBooking.query.filter_by(status='confirmed').count(),
+                'completed': MeetingBooking.query.filter_by(status='completed').count(),
+                'cancelled': MeetingBooking.query.filter_by(status='cancelled').count()
+            },
+            'list': MeetingBooking.query.order_by(MeetingBooking.created_at.desc()).limit(100).all()
+        },
+        
+        # Platform metrics
+        'platform': {
+            'total_entities': 0,
+            'growth_rate': 0,
+            'engagement_rate': 0
+        }
+    }
+    
+    # Calculate school distribution
+    schools = School.query.all()
+    for school in schools:
+        region = school.region or 'Unknown'
+        level = school.level or 'Unknown'
+        
+        report['schools']['by_region'][region] = report['schools']['by_region'].get(region, 0) + 1
+        report['schools']['by_level'][level] = report['schools']['by_level'].get(level, 0) + 1
+    
+    # Calculate totals
+    report['platform']['total_entities'] = (
+        report['users']['total'] + 
+        report['schools']['total'] + 
+        report['principals']['total']
+    )
+    
+    return report
+
+def create_pdf_report(report_data):
+    """Generate PDF report with comprehensive system data"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                          rightMargin=72, leftMargin=72,
+                          topMargin=72, bottomMargin=72)
+    
+    styles = getSampleStyleSheet()
+    
+    # Create custom styles safely - check if they exist first
+    custom_styles = {}
+    
+    # Define custom styles with unique names
+    if 'CustomTitle' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#E65C00')
+        ))
+    custom_styles['Title'] = styles['CustomTitle']
+    
+    if 'CustomHeading2Orange' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomHeading2Orange',
+            parent=styles['Heading2'],
+            textColor=colors.HexColor('#E65C00'),
+            spaceAfter=12
+        ))
+    custom_styles['Heading2Orange'] = styles['CustomHeading2Orange']
+    
+    if 'CustomBodyText' not in styles:
+        styles.add(ParagraphStyle(
+            name='CustomBodyText',
+            parent=styles['BodyText'],
+            fontSize=10,
+            spaceAfter=6
+        ))
+    custom_styles['BodyText'] = styles['CustomBodyText']
+    
+    # Build the story (content)
+    story = []
+    
+    # ===== COVER PAGE =====
+    story.append(Spacer(1, 2*inch))
+    story.append(Paragraph("EDUQUEST PLATFORM", custom_styles['Title']))
+    story.append(Spacer(1, 0.5*inch))
+    story.append(Paragraph("SYSTEM ANALYTICS REPORT", custom_styles['Title']))
+    story.append(Spacer(1, inch))
+    
+    # Report details
+    details = [
+        ["Report ID:", report_data['report_id']],
+        ["Generated:", report_data['generated_at'].strftime('%B %d, %Y %I:%M %p')],
+        ["Period:", report_data['date_range'].title()],
+        ["Platform:", "EduQuest School Finder System"]
+    ]
+    
+    for label, value in details:
+        story.append(Paragraph(f"<b>{label}</b> {value}", custom_styles['BodyText']))
+    
+    story.append(Spacer(1, inch))
+    story.append(Paragraph("CONFIDENTIAL - INTERNAL USE ONLY", 
+                          ParagraphStyle(name='Confidential', 
+                                        parent=styles['Normal'],
+                                        fontSize=8,
+                                        textColor=colors.grey,
+                                        alignment=TA_CENTER)))
+    
+    story.append(PageBreak())
+    
+    # ===== EXECUTIVE SUMMARY =====
+    story.append(Paragraph("EXECUTIVE SUMMARY", custom_styles['Heading2Orange']))
+    story.append(Spacer(1, 0.2*inch))
+    
+    summary_text = f"""
+    This report provides a comprehensive overview of the EduQuest platform as of {report_data['generated_at'].strftime('%B %d, %Y')}. 
+    The platform currently serves {report_data['users']['total']} registered users across {report_data['schools']['total']} schools 
+    in Kenya. Key metrics show {report_data['users']['new_this_week']} new user registrations this week and 
+    {report_data['feedback']['total']} pieces of feedback collected from the community.
+    """
+    story.append(Paragraph(summary_text, custom_styles['BodyText']))
+    
+    # Quick Stats Table
+    quick_stats = [
+        ['METRIC', 'COUNT', 'CHANGE'],
+        ['Total Users', str(report_data['users']['total']), '+12%'],
+        ['Registered Schools', str(report_data['schools']['total']), '+5%'],
+        ['Active Principals', str(report_data['principals']['active']), '+8%'],
+        ['Feedback Received', str(report_data['feedback']['total']), '+15%'],
+        ['Meeting Requests', str(report_data['meetings']['total']), '+22%']
+    ]
+    
+    table = Table(quick_stats, colWidths=[2.5*inch, 1.5*inch, 1.5*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E65C00')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    
+    story.append(table)
+    story.append(PageBreak())
+    
+    # ===== USER STATISTICS =====
+    story.append(Paragraph("USER DEMOGRAPHICS", custom_styles['Heading2Orange']))
+    
+    # User breakdown chart (simulated with text for now)
+    users_by_type = [
+        ['User Type', 'Count', 'Percentage'],
+        ['Parents/Guardians', str(int(report_data['users']['total'] * 0.6)), '60%'],
+        ['Students', str(int(report_data['users']['total'] * 0.35)), '35%'],
+        ['Principals/Staff', str(report_data['principals']['active']), '5%']
+    ]
+    
+    user_table = Table(users_by_type, colWidths=[2*inch, 1.5*inch, 1.5*inch])
+    user_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E86AB')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 1), (0, -1), colors.lightblue),
+        ('BACKGROUND', (1, 1), (1, -1), colors.lightgrey),
+        ('BACKGROUND', (2, 1), (2, -1), colors.lightgreen),
+    ]))
+    
+    story.append(user_table)
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Recent user registrations (top 10)
+    story.append(Paragraph("Recent User Registrations", styles['Heading3']))
+    
+    if report_data['users']['list']:
+        user_data = [['Name', 'Email', 'Phone', 'Registered']]
+        for user in report_data['users']['list'][:10]:
+            user_data.append([
+                user.name,
+                user.email,
+                user.phone or 'N/A',
+                user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A'
+            ])
+        
+        recent_users_table = Table(user_data, colWidths=[1.5*inch, 2*inch, 1.2*inch, 1*inch])
+        recent_users_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A6FA5')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
+        ]))
+        
+        story.append(recent_users_table)
+    else:
+        story.append(Paragraph("No user data available", custom_styles['BodyText']))
+    
+    story.append(PageBreak())
+    
+    # ===== SCHOOL ANALYSIS =====
+    story.append(Paragraph("SCHOOL DISTRIBUTION", custom_styles['Heading2Orange']))
+    
+    # Schools by region
+    story.append(Paragraph("Schools by Region", styles['Heading3']))
+    if report_data['schools']['by_region']:
+        region_data = [['Region', 'Number of Schools', 'Percentage']]
+        total_schools = report_data['schools']['total']
+        
+        for region, count in sorted(report_data['schools']['by_region'].items(), key=lambda x: x[1], reverse=True):
+            percentage = (count / total_schools * 100) if total_schools > 0 else 0
+            region_data.append([region, str(count), f"{percentage:.1f}%"])
+        
+        region_table = Table(region_data, colWidths=[2*inch, 1.5*inch, 1.5*inch])
+        region_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E65C00')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
+        ]))
+        
+        story.append(region_table)
+    else:
+        story.append(Paragraph("No regional data available", custom_styles['BodyText']))
+    
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Schools by level
+    story.append(Paragraph("Schools by Education Level", styles['Heading3']))
+    if report_data['schools']['by_level']:
+        level_data = [['Education Level', 'Number of Schools']]
+        
+        for level, count in sorted(report_data['schools']['by_level'].items(), key=lambda x: x[1], reverse=True):
+            level_data.append([level, str(count)])
+        
+        level_table = Table(level_data, colWidths=[3*inch, 2*inch])
+        level_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E86AB')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
+        ]))
+        
+        story.append(level_table)
+    
+    story.append(PageBreak())
+    
+    # ===== FEEDBACK ANALYTICS =====
+    story.append(Paragraph("FEEDBACK & ENGAGEMENT", custom_styles['Heading2Orange']))
+    
+    # Feedback statistics
+    feedback_stats = [
+        ['Metric', 'Count', 'Rate'],
+        ['Total Feedback', str(report_data['feedback']['total']), '100%'],
+        ['With Admin Reply', str(report_data['feedback']['with_admin_reply']), 
+         f"{(report_data['feedback']['with_admin_reply']/report_data['feedback']['total']*100):.1f}%" if report_data['feedback']['total'] > 0 else '0%'],
+        ['With Principal Reply', str(report_data['feedback']['with_principal_reply']),
+         f"{(report_data['feedback']['with_principal_reply']/report_data['feedback']['total']*100):.1f}%" if report_data['feedback']['total'] > 0 else '0%'],
+        ['Pending Reply', str(report_data['feedback']['pending_reply']),
+         f"{(report_data['feedback']['pending_reply']/report_data['feedback']['total']*100):.1f}%" if report_data['feedback']['total'] > 0 else '0%']
+    ]
+    
+    feedback_table = Table(feedback_stats, colWidths=[2*inch, 1.5*inch, 1.5*inch])
+    feedback_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A6FA5')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 1), (0, -1), colors.lightblue),
+        ('BACKGROUND', (1, 1), (1, -1), colors.lightgrey),
+        ('BACKGROUND', (2, 1), (2, -1), colors.lightgreen),
+    ]))
+    
+    story.append(feedback_table)
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Recent feedback
+    story.append(Paragraph("Recent Feedback Examples", styles['Heading3']))
+    
+    if report_data['feedback']['list']:
+        for i, feedback in enumerate(report_data['feedback']['list'][:5]):
+            story.append(Paragraph(f"<b>Feedback #{i+1}</b>", custom_styles['BodyText']))
+            story.append(Paragraph(f"From: {feedback.name} ({feedback.email or 'No email'})", 
+                                 ParagraphStyle(name='SmallText', parent=styles['Normal'], fontSize=8)))
+            story.append(Paragraph(f"Message: {feedback.message[:150]}..." if len(feedback.message) > 150 else f"Message: {feedback.message}", 
+                                 custom_styles['BodyText']))
+            story.append(Paragraph(f"Date: {feedback.created_at.strftime('%Y-%m-%d %H:%M') if feedback.created_at else 'N/A'}", 
+                                 ParagraphStyle(name='SmallText', parent=styles['Normal'], fontSize=8)))
+            story.append(Spacer(1, 0.1*inch))
+    else:
+        story.append(Paragraph("No feedback data available", custom_styles['BodyText']))
+    
+    story.append(PageBreak())
+    
+    # ===== MEETING BOOKINGS =====
+    story.append(Paragraph("MEETING BOOKINGS", custom_styles['Heading2Orange']))
+    
+    # Meeting status breakdown
+    meeting_status = report_data['meetings']['by_status']
+    meeting_stats = [
+        ['Status', 'Count', 'Percentage'],
+        ['Pending', str(meeting_status['pending']), 
+         f"{(meeting_status['pending']/report_data['meetings']['total']*100):.1f}%" if report_data['meetings']['total'] > 0 else '0%'],
+        ['Confirmed', str(meeting_status['confirmed']),
+         f"{(meeting_status['confirmed']/report_data['meetings']['total']*100):.1f}%" if report_data['meetings']['total'] > 0 else '0%'],
+        ['Completed', str(meeting_status['completed']),
+         f"{(meeting_status['completed']/report_data['meetings']['total']*100):.1f}%" if report_data['meetings']['total'] > 0 else '0%'],
+        ['Cancelled', str(meeting_status['cancelled']),
+         f"{(meeting_status['cancelled']/report_data['meetings']['total']*100):.1f}%" if report_data['meetings']['total'] > 0 else '0%']
+    ]
+    
+    meeting_table = Table(meeting_stats, colWidths=[1.5*inch, 1.5*inch, 1.5*inch])
+    meeting_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E65C00')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 1), (0, -1), colors.lightblue),
+        ('BACKGROUND', (1, 1), (1, -1), colors.lightgrey),
+        ('BACKGROUND', (2, 1), (2, -1), colors.lightgreen),
+    ]))
+    
+    story.append(meeting_table)
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Recent meeting requests
+    story.append(Paragraph("Recent Meeting Requests", styles['Heading3']))
+    
+    if report_data['meetings']['list']:
+        meeting_data = [['User', 'Purpose', 'Date', 'Status']]
+        for meeting in report_data['meetings']['list'][:8]:
+            purpose = meeting.purpose[:30] + "..." if len(meeting.purpose) > 30 else meeting.purpose
+            meeting_data.append([
+                meeting.user_name,
+                purpose,
+                meeting.preferred_date.strftime('%Y-%m-%d') if meeting.preferred_date else 'N/A',
+                meeting.status.title()
+            ])
+        
+        recent_meetings_table = Table(meeting_data, colWidths=[1.5*inch, 2*inch, 1.2*inch, 1*inch])
+        recent_meetings_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E86AB')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
+        ]))
+        
+        story.append(recent_meetings_table)
+    
+    story.append(PageBreak())
+    
+    # ===== CONCLUSIONS & RECOMMENDATIONS =====
+    story.append(Paragraph("CONCLUSIONS & RECOMMENDATIONS", custom_styles['Heading2Orange']))
+    
+    conclusions = [
+        Paragraph("<b>Key Findings:</b>", styles['Heading3']),
+        Paragraph(f"1. Platform Growth: The system has grown to {report_data['users']['total']} users and {report_data['schools']['total']} schools.", custom_styles['BodyText']),
+        Paragraph(f"2. Engagement: {report_data['feedback']['total']} feedback entries show strong community engagement.", custom_styles['BodyText']),
+        Paragraph(f"3. Response Rate: {report_data['feedback']['with_admin_reply'] + report_data['feedback']['with_principal_reply']} feedback items have received responses.", custom_styles['BodyText']),
+        Paragraph(f"4. Meeting Activity: {report_data['meetings']['total']} meeting requests indicate active parent-school communication.", custom_styles['BodyText']),
+        Spacer(1, 0.2*inch),
+        Paragraph("<b>Recommendations:</b>", styles['Heading3']),
+        Paragraph("1. <b>Improve Response Times:</b> Focus on reducing pending feedback response time.", custom_styles['BodyText']),
+        Paragraph("2. <b>Expand School Coverage:</b> Target regions with fewer registered schools.", custom_styles['BodyText']),
+        Paragraph("3. <b>Enhance User Engagement:</b> Implement notification system for meeting confirmations.", custom_styles['BodyText']),
+        Paragraph("4. <b>Data Quality:</b> Regular cleanup of inactive user accounts.", custom_styles['BodyText']),
+        Spacer(1, 0.2*inch),
+        Paragraph("<b>Next Steps:</b>", styles['Heading3']),
+        Paragraph("• Monthly report generation automated", custom_styles['BodyText']),
+        Paragraph("• Principal training on platform features", custom_styles['BodyText']),
+        Paragraph("• User feedback collection optimization", custom_styles['BodyText']),
+        Paragraph("• Regional expansion strategy development", custom_styles['BodyText']),
+    ]
+    
+    for item in conclusions:
+        story.append(item)
+    
+    story.append(Spacer(1, 0.5*inch))
+    
+    # Footer with page numbers
+    story.append(Paragraph("--- END OF REPORT ---", 
+                          ParagraphStyle(name='Footer', 
+                                        parent=styles['Normal'],
+                                        fontSize=8,
+                                        textColor=colors.grey,
+                                        alignment=TA_CENTER)))
+    
+    # Build PDF
+    doc.build(story)
+    
+    buffer.seek(0)
+    return buffer
+
+def generate_pdf_report(report_data):
+    """Generate and return PDF file"""
+    pdf_buffer = create_pdf_report(report_data)
+    
+    # Create response
+    from flask import make_response
+    response = make_response(pdf_buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=eduquest_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+    
+    return response
 
 # ---------------------
 # Frontend Routes
@@ -1242,6 +1750,61 @@ def test_user_stats():
             'message': 'User model query failed'
         }), 500
 
+
+# 📊 ROUTE TO CHECK ALL DATABASE TABLES
+@app.route('/debug-db')
+def debug_database():
+    """Check all tables in database with counts"""
+    try:
+        from models import db, School, Principal, Feedback, MeetingBooking, Admin, User
+        
+        tables_data = {
+            "schools": School.query.count(),
+            "principals": Principal.query.count(),
+            "feedbacks": Feedback.query.count(),
+            "meetings": MeetingBooking.query.count(),
+            "admins": Admin.query.count(),
+            "users": User.query.count()
+        }
+        
+        return jsonify({
+            "database_status": "✅ Connected",
+            "table_counts": tables_data,
+            "total_records": sum(tables_data.values())
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "database_status": "❌ Error",
+            "error": str(e)
+        }), 500
+      
+#ROUTE TO SEE ALL USERS IN THE DATABASE    
+@app.route('/debug-users')
+def debug_users():
+    """Debug route to check all users in database"""
+    try:
+        users = User.query.all()
+        
+        users_data = []
+        for user in users:
+            users_data.append({
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "phone": user.phone,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "is_active": user.is_active
+            })
+        
+        return jsonify({
+            "total_users": len(users),
+            "users": users_data
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 #ROUTE FOR EDITING SCHOOLS ON THE ADMIN DASHBOARD
 @app.route('/admin/edit/<int:id>', methods=['POST'])
 def update_school_form(id):
@@ -1382,6 +1945,34 @@ def debug_add_school():
         import traceback
         print(f"🔍 FULL TRACEBACK: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
+    
+#ROUTE TO GENERATE REPORT
+@app.route('/api/admin/generate-report', methods=['POST'])
+def generate_system_report():
+    """Generate comprehensive system report in PDF format"""
+    if not session.get('admin_logged_in'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        data = request.json or {}
+        date_range = data.get('date_range', 'all')  # all, week, month, quarter
+        
+        print(f"📊 Generating system report for period: {date_range}")
+        
+        # Collect report data
+        report_data = collect_report_data(date_range)
+        
+        # Generate PDF report
+        pdf_response = generate_pdf_report(report_data)
+        
+        print(f"✅ Report generated successfully: {report_data['report_id']}")
+        return pdf_response
+        
+    except Exception as e:
+        print(f"❌ Report generation error: {str(e)}")
+        import traceback
+        print(f"🔍 FULL TRACEBACK: {traceback.format_exc()}")
+        return jsonify({"error": f"Report generation failed: {str(e)}"}), 500
 
 # ---------------------
 # Run

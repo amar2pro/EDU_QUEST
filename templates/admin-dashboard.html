@@ -389,11 +389,11 @@
                                     </svg>
                                     Add New School
                                 </button>
-                                <button class="w-full border border-gray-300 hover:border-orange-600 text-gray-700 py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center">
+                                <button onclick="generateReport()" class="w-full border border-gray-300 hover:border-orange-600 text-gray-700 py-3 px-4 rounded-lg font-semibold transition flex items-center justify-center">
                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
-                                    Generate Report
+                                     Generate Report
                                 </button>
                             </div>
                         </div>
@@ -1424,6 +1424,133 @@ function showErrorState() {
 
             console.log('✅ Admin dashboard initialized successfully!');
     });
+
+// Function to generate report
+window.generateReport = async function() {
+    console.log('📊 Generating system report...');
+    
+    // Show date range selection modal
+    const dateRange = prompt(
+        "Select report period:\n\n" +
+        "Enter one of the following:\n" +
+        "- 'all' for all time\n" +
+        "- 'week' for last week\n" +
+        "- 'month' for last month\n" +
+        "- 'quarter' for last quarter\n\n" +
+        "Default is 'all' time:", 
+        "all"
+    );
+    
+    if (dateRange === null) {
+        console.log('Report generation cancelled');
+        return;
+    }
+    
+    // Map user input to date_range values
+    let dateRangeValue = 'all';
+    const input = dateRange.toLowerCase().trim();
+    
+    if (input === 'week' || input === '2') {
+        dateRangeValue = 'week';
+    } else if (input === 'month' || input === '3') {
+        dateRangeValue = 'month';
+    } else if (input === 'quarter' || input === '4') {
+        dateRangeValue = 'quarter';
+    } else if (input === 'all' || input === '1' || input === '') {
+        dateRangeValue = 'all';
+    }
+    
+    try {
+        // Find the Generate Report button
+        const buttons = document.querySelectorAll('button');
+        let reportBtn = null;
+        
+        for (const btn of buttons) {
+            if (btn.textContent.includes('Generate Report')) {
+                reportBtn = btn;
+                break;
+            }
+        }
+        
+        // Show loading state if button found
+        let originalHtml = '';
+        if (reportBtn) {
+            originalHtml = reportBtn.innerHTML;
+            reportBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Generating Report...';
+            reportBtn.disabled = true;
+        }
+        
+        // Show loading message
+        console.log(`📤 Generating report for period: ${dateRangeValue}`);
+        
+        // Make API call to generate report
+        const response = await fetch('/api/admin/generate-report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date_range: dateRangeValue,
+                format: 'pdf'
+            })
+        });
+        
+        if (response.ok) {
+            // Check if response is PDF
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/pdf')) {
+                // Get PDF blob
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const timestamp = new Date().toISOString().slice(0,10);
+                a.download = `eduquest_report_${timestamp}_${dateRangeValue}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                console.log('✅ Report downloaded successfully!');
+                
+                // Show success message
+                alert(`✅ Report generated successfully!\n\n📋 Period: ${dateRangeValue}\n📁 File: ${a.download}\n\nThe PDF will open in your downloads folder.`);
+            } else {
+                // If not PDF, check for JSON error
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Unknown error');
+            }
+        } else {
+            // Handle non-OK responses
+            let errorMessage = `Server returned ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+                // Not JSON response
+            }
+            throw new Error(errorMessage);
+        }
+        
+    } catch (error) {
+        console.error('❌ Report generation error:', error);
+        alert(`❌ Error generating report:\n\n${error.message}\n\nPlease check the console for details.`);
+        
+    } finally {
+        // Reset button if it exists
+        const buttons = document.querySelectorAll('button');
+        for (const btn of buttons) {
+            if (btn.textContent.includes('Generating Report...')) {
+                btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Generate Report';
+                btn.disabled = false;
+            }
+        }
+    }
+};
 </script>
                         
 </body>
